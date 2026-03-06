@@ -43,11 +43,7 @@ export function UnifiedDashboard() {
     serverChannels,  // Upstream server channels (for shares to Pool)
     isLoading: poolLoading,
     isError: poolError,
-  } = usePoolData();
-
-  // Health checks for status indicators — also drive the error banner
-  // (poolError alone is insufficient: if Translator is down but JDC is up,
-  // usePoolData falls back to JDC and never sets isError, so we'd miss it)
+  } = usePoolData(templateMode);
 
   // SV1 clients (always from Translator)
   const {
@@ -56,6 +52,8 @@ export function UnifiedDashboard() {
     refetch: refetchSv1,
   } = useSv1ClientsData(0, 1000); // Fetch all for client-side filtering
 
+  // Health checks for status indicators
+  // Only check JDC health if in JD mode (avoids unnecessary probing in No-JD mode)
   const {
     data: translatorOk,
     isLoading: translatorHealthLoading,
@@ -65,7 +63,7 @@ export function UnifiedDashboard() {
     data: jdcOk,
     isLoading: jdcHealthLoading,
     isError: jdcHealthError,
-  } = useJdcHealth();
+  } = useJdcHealth(isJdMode); // Only probe JDC when in JD mode
 
   // Derive per-service error state from health checks.
   // A service is considered down when:
@@ -75,11 +73,8 @@ export function UnifiedDashboard() {
   const translatorHealthy = translatorOk === true && !translatorHealthError;
   const jdcHealthy = jdcOk === true && !jdcHealthError;
   const translatorDown = !translatorHealthLoading && !translatorHealthy;
-  const jdcDown = !jdcHealthLoading && isJdMode && !jdcHealthy;
+  const jdcDown = isJdMode && !jdcHealthLoading && !jdcHealthy;
   const showError = poolError || translatorDown || jdcDown;
-
-  // Check if configured but not running (show "Start Mining" instead of error)
-  const { isOrchestrated, isConfigured, isRunning } = useSetupStatus();
   const configuredButStopped = isOrchestrated && isConfigured && !isRunning;
   const [isStarting, setIsStarting] = useState(false);
 

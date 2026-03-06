@@ -20,6 +20,13 @@ export interface AggregatedClientChannels {
 }
 
 /**
+ * Template mode from configuration.
+ * - 'jd': JD Client mode (JDC + Translator)
+ * - 'no-jd': Translator-only mode
+ */
+export type TemplateMode = 'jd' | 'no-jd' | null;
+
+/**
  * Detect if we're in development mode (Vite dev server).
  * In dev mode, we use Vite's proxy to avoid CORS issues.
  * In production (embedded UI), we use absolute URLs.
@@ -86,26 +93,6 @@ function getEndpointsCached() {
 }
 
 /**
- * Detect which mode is active by checking endpoint availability.
- * Returns 'jdc' if JDC is available, otherwise 'translator'.
- */
-async function detectMode(): Promise<'jdc' | 'translator'> {
-  const endpoints = getEndpointsCached();
-  
-  try {
-    const response = await fetch(`${endpoints.jdc.base}/health`, {
-      signal: AbortSignal.timeout(2000),
-    });
-    if (response.ok) {
-      return 'jdc';
-    }
-  } catch {
-    // JDC not available
-  }
-  return 'translator';
-}
-
-/**
  * Fetch data from an endpoint with timeout.
  */
 async function fetchWithTimeout<T>(url: string, timeoutMs = 5000): Promise<T> {
@@ -119,17 +106,12 @@ async function fetchWithTimeout<T>(url: string, timeoutMs = 5000): Promise<T> {
 }
 
 /**
- * Hook to detect which mode the stack is running in.
- * Caches the result and re-checks periodically.
+ * Convert template mode from config to internal mode.
+ * - 'jd' -> 'jdc' (use JDC endpoints)
+ * - 'no-jd' or null -> 'translator' (use Translator endpoints)
  */
-export function useStackMode() {
-  return useQuery({
-    queryKey: ['stack-mode'],
-    queryFn: detectMode,
-    staleTime: 30000, // Re-check every 30 seconds
-    refetchInterval: 30000,
-    retry: false,
-  });
+function templateModeToInternalMode(templateMode: TemplateMode): 'jdc' | 'translator' {
+  return templateMode === 'jd' ? 'jdc' : 'translator';
 }
 
 /**
@@ -179,15 +161,17 @@ async function fetchAllClientChannels(baseUrl: string): Promise<AggregatedClient
 
 /**
  * Hook to fetch Pool connection data.
- * Automatically fetches from JDC (if available) or Translator.
+ * Uses the configured template mode to determine which endpoints to use.
+ * 
+ * @param templateMode - The configured template mode from useSetupStatus ('jd' | 'no-jd' | null)
  * 
  * Returns both:
  * - serverChannels: upstream connection to Pool (shares, best diff)
  * - clientChannels: downstream clients connecting to JDC/Translator (for Dashboard)
  */
-export function usePoolData() {
+export function usePoolData(templateMode: TemplateMode = null) {
   const endpoints = getEndpointsCached();
-  const { data: mode, isLoading: modeLoading } = useStackMode();
+  const mode = templateModeToInternalMode(templateMode);
   
   const baseUrl = mode === 'jdc' ? endpoints.jdc.base : endpoints.translator.base;
   
@@ -195,7 +179,6 @@ export function usePoolData() {
   const globalQuery = useQuery({
     queryKey: ['pool-global', mode],
     queryFn: () => fetchWithTimeout<GlobalInfo>(`${baseUrl}/global`),
-    enabled: !modeLoading && !!mode,
     refetchInterval: 3000,
   });
   
@@ -203,7 +186,6 @@ export function usePoolData() {
   const serverChannelsQuery = useQuery({
     queryKey: ['server-channels', mode],
     queryFn: () => fetchWithTimeout<ServerChannelsResponse>(`${baseUrl}/server/channels?offset=0&limit=100`),
-    enabled: !modeLoading && !!mode,
     refetchInterval: 3000,
   });
   
@@ -211,7 +193,6 @@ export function usePoolData() {
   const clientChannelsQuery = useQuery({
     queryKey: ['client-channels', mode],
     queryFn: () => fetchAllClientChannels(baseUrl),
-    enabled: !modeLoading && !!mode,
     refetchInterval: 3000,
   });
   
@@ -226,7 +207,7 @@ export function usePoolData() {
     clientChannels: clientChannelsQuery.data,
     // Keep 'channels' as alias for serverChannels for backward compatibility
     channels: serverChannelsQuery.data,
-    isLoading: modeLoading || globalQuery.isLoading,
+    isLoading: globalQuery.isLoading,
     isError: globalQuery.isError,
     error: globalQuery.error,
   };
@@ -276,8 +257,11 @@ export function useTranslatorHealth() {
 
 /**
  * Hook to fetch JDC health (to show connection status).
+ * 
+ * @param enabled - Whether to enable the health check (default: true).
+ *                  Set to false in No-JD mode to skip probing JDC.
  */
-export function useJdcHealth() {
+export function useJdcHealth(enabled = true) {
   const endpoints = getEndpointsCached();
   
   return useQuery({
@@ -288,7 +272,8 @@ export function useJdcHealth() {
       });
       return response.ok;
     },
-    refetchInterval: 5000,
+    enabled,
+    refetchInterval: enabled ? 5000 : false,
     retry: false,
   });
 }
