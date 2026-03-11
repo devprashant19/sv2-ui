@@ -8,6 +8,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
+import { MinerConnectionInfo } from '../MinerConnectionInfo';
 
 interface ReviewStartProps extends StepProps {
   onComplete: () => void;
@@ -19,6 +20,7 @@ interface ReviewStartProps extends StepProps {
 export function ReviewStart({ data, onComplete }: ReviewStartProps) {
   const queryClient = useQueryClient();
   const [isStarting, setIsStarting] = useState(false);
+  const [started, setStarted] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const isJdMode = data.mode === 'jd';
@@ -45,10 +47,11 @@ export function ReviewStart({ data, onComplete }: ReviewStartProps) {
       // Invalidate setup status so dashboard gets fresh data
       await queryClient.invalidateQueries({ queryKey: ['setup-status'] });
 
-      // Wait a moment for services to start
+      // Wait a moment for services to start, then show connection info
       await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      onComplete();
+
+      setStarted(true);
+      setIsStarting(false);
     } catch (err) {
       console.error('Failed to start services:', err);
       let message = 'Failed to start services';
@@ -63,6 +66,41 @@ export function ReviewStart({ data, onComplete }: ReviewStartProps) {
       setIsStarting(false);
     }
   };
+
+  // ── Connection instructions screen ──────────────────────────────────────────
+  if (started) {
+    return (
+      <div className="space-y-8">
+        {/* Header */}
+        <div className="text-center">
+          <div className="flex justify-center mb-4">
+            <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center">
+              <CheckCircle2 className="w-8 h-8 text-green-500" />
+            </div>
+          </div>
+          <h2 className="text-2xl md:text-3xl font-semibold tracking-tight mb-3">
+            Stack is running!
+          </h2>
+          <p className="text-lg text-muted-foreground">
+            Point your mining devices to the addresses below
+          </p>
+        </div>
+
+        {/* Connection cards */}
+        <MinerConnectionInfo isJdMode={isJdMode} />
+
+        {/* Go to dashboard */}
+        <div className="flex justify-end">
+          <button
+            onClick={onComplete}
+            className="h-11 px-10 rounded-full bg-foreground text-background hover:bg-foreground/90 transition-colors font-medium text-base"
+          >
+            Go to Dashboard
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">

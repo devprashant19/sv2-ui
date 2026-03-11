@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { StepProps, TranslatorConfig } from '../types';
 import { Switch } from '@/components/ui/switch';
 import { Info } from 'lucide-react';
+import { TRANSLATOR_PORT } from '@/lib/ports';
 
 /**
  * Step 5 (or 3 for solo): Translator Proxy Configuration (sv2-wizard inspired)
@@ -67,7 +68,7 @@ export function TranslatorConfigStep({ data, updateData, onNext }: StepProps) {
           <div className="text-sm text-muted-foreground">
             <p>
               The Translator Proxy bridges your SV1 mining hardware to the SV2 {isSoloMode ? 'solo pool' : 'pool'}.
-              Your miners will connect to the Translator on port <code className="text-xs bg-muted px-1 py-0.5 rounded">34255</code>.
+              Your miners will connect to the Translator on port <code className="text-xs bg-muted px-1 py-0.5 rounded">{TRANSLATOR_PORT}</code>.
             </p>
           </div>
         </div>

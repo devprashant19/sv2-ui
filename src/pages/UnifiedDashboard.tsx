@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { AlertTriangle, Search, RefreshCw, Play } from 'lucide-react';
+import { MinerConnectionInfo } from '@/components/setup/MinerConnectionInfo';
 import { Shell } from '@/components/layout/Shell';
 import { StatCard } from '@/components/data/StatCard';
 import { HashrateChart } from '@/components/data/HashrateChart';
@@ -284,6 +285,12 @@ export function UnifiedDashboard() {
           value={bestDiff > 0 ? formatDifficulty(bestDiff) : '-'}
           subtitle={`from ${clientChannelCount} client channel(s)`}
         />
+      </div>
+
+      {/* Miner Connection Info */}
+      <div>
+        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-widest mb-3">Point your miners to</h2>
+        <MinerConnectionInfo isJdMode={isJdMode} />
       </div>
 
       {/* Main Chart - Real data accumulated over time */}
