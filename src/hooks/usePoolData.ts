@@ -27,56 +27,22 @@ export interface AggregatedClientChannels {
 export type TemplateMode = 'jd' | 'no-jd' | null;
 
 /**
- * Detect if we're in development mode (Vite dev server).
- * In dev mode, we use Vite's proxy to avoid CORS issues.
- * In production (embedded UI), we use absolute URLs.
- */
-const isDev = import.meta.env.DEV;
-
-/**
  * Get endpoint configuration.
  * 
- * In DEVELOPMENT (npm run dev):
- *   Uses Vite proxy paths (/jdc-api, /translator-api) to avoid CORS
+ * Both development and production use proxy paths through the backend server
+ * to avoid CORS issues with the Translator/JDC monitoring APIs.
  * 
- * In PRODUCTION (embedded UI or standalone):
- *   Uses absolute URLs from URL params or env vars:
- *   - ?jdc_url=http://192.168.1.10:9091&translator_url=http://192.168.1.10:9092
- *   - VITE_JDC_URL, VITE_TRANSLATOR_URL
+ * - /translator-api/* -> proxied to localhost:9092
+ * - /jdc-api/* -> proxied to localhost:9091
  */
 function getEndpoints() {
-  if (isDev) {
-    // Development: use Vite proxy to avoid CORS
-    return {
-      jdc: {
-        base: '/jdc-api/v1',
-        label: 'JD Client',
-      },
-      translator: {
-        base: '/translator-api/v1',
-        label: 'Translator',
-      },
-    };
-  }
-  
-  // Production: use absolute URLs
-  const urlParams = new URLSearchParams(window.location.search);
-  
-  const jdcUrl = urlParams.get('jdc_url') 
-    || import.meta.env.VITE_JDC_URL 
-    || 'http://localhost:9091';
-  
-  const translatorUrl = urlParams.get('translator_url') 
-    || import.meta.env.VITE_TRANSLATOR_URL 
-    || 'http://localhost:9092';
-  
   return {
     jdc: {
-      base: `${jdcUrl}/api/v1`,
+      base: '/jdc-api/v1',
       label: 'JD Client',
     },
     translator: {
-      base: `${translatorUrl}/api/v1`,
+      base: '/translator-api/v1',
       label: 'Translator',
     },
   };

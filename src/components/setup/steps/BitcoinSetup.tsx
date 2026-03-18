@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { StepProps, BitcoinConfig, OperatingSystem } from '../types';
-import { Bitcoin, AlertCircle, Apple, Terminal, Pencil, Copy, Check } from 'lucide-react';
+import { Bitcoin, AlertCircle, Apple, Terminal, Copy, Check } from 'lucide-react';
 
 /**
- * Compute the default Bitcoin data directory based on OS.
+ * Get the default Bitcoin data directory for the OS.
  */
 function getDefaultDataDir(os: OperatingSystem): string {
   switch (os) {
@@ -34,7 +34,6 @@ export function BitcoinSetup({ data, updateData, onNext }: StepProps) {
   const [network, setNetwork] = useState<'mainnet' | 'testnet4'>(data.bitcoin?.network || 'mainnet');
   const [customDataDir, setCustomDataDir] = useState(data.bitcoin?.customDataDir || '');
   const [manualSocketPath, setManualSocketPath] = useState(data.bitcoin?.socket_path || '');
-  const [isEditingPath, setIsEditingPath] = useState(false);
   const [copiedCommand, setCopiedCommand] = useState(false);
 
   const computedSocketPath = computeSocketPath(os, network, customDataDir);
@@ -49,22 +48,6 @@ export function BitcoinSetup({ data, updateData, onNext }: StepProps) {
     };
     updateData({ bitcoin: config });
   }, [os, network, customDataDir, socketPath, updateData]);
-
-  const handlePathClick = () => {
-    setIsEditingPath(true);
-    setManualSocketPath(socketPath);
-  };
-
-  const handlePathChange = (value: string) => {
-    setManualSocketPath(value);
-  };
-
-  const handlePathBlur = () => {
-    if (!manualSocketPath.trim()) {
-      setManualSocketPath('');
-      setIsEditingPath(false);
-    }
-  };
 
   const getBitcoindCommand = () => {
     const baseCmd = 'bitcoin -m node -ipcbind=unix';
@@ -127,7 +110,7 @@ export function BitcoinSetup({ data, updateData, onNext }: StepProps) {
         <label className="block text-sm font-medium mb-3">Operating System</label>
         <div className="grid grid-cols-2 gap-3">
           <button
-            onClick={() => { setOs('linux'); setManualSocketPath(''); setIsEditingPath(false); }}
+            onClick={() => { setOs('linux'); setManualSocketPath(''); }}
             className={`p-4 rounded-xl border-2 transition-all ${
               os === 'linux'
                 ? 'border-primary bg-primary/5'
@@ -140,7 +123,7 @@ export function BitcoinSetup({ data, updateData, onNext }: StepProps) {
             </div>
           </button>
           <button
-            onClick={() => { setOs('macos'); setManualSocketPath(''); setIsEditingPath(false); }}
+            onClick={() => { setOs('macos'); setManualSocketPath(''); }}
             className={`p-4 rounded-xl border-2 transition-all ${
               os === 'macos'
                 ? 'border-primary bg-primary/5'
@@ -160,7 +143,7 @@ export function BitcoinSetup({ data, updateData, onNext }: StepProps) {
         <label className="block text-sm font-medium mb-3">Bitcoin Network</label>
         <div className="grid grid-cols-2 gap-3">
           <button
-            onClick={() => { setNetwork('mainnet'); setManualSocketPath(''); setIsEditingPath(false); }}
+            onClick={() => { setNetwork('mainnet'); setManualSocketPath(''); }}
             className={`p-4 rounded-xl border-2 transition-all ${
               network === 'mainnet'
                 ? 'border-primary bg-primary/5'
@@ -173,7 +156,7 @@ export function BitcoinSetup({ data, updateData, onNext }: StepProps) {
             </div>
           </button>
           <button
-            onClick={() => { setNetwork('testnet4'); setManualSocketPath(''); setIsEditingPath(false); }}
+            onClick={() => { setNetwork('testnet4'); setManualSocketPath(''); }}
             className={`p-4 rounded-xl border-2 transition-all ${
               network === 'testnet4'
                 ? 'border-primary bg-primary/5'
@@ -196,7 +179,7 @@ export function BitcoinSetup({ data, updateData, onNext }: StepProps) {
         <input
           type="text"
           value={customDataDir}
-          onChange={(e) => { setCustomDataDir(e.target.value); setManualSocketPath(''); setIsEditingPath(false); }}
+          onChange={(e) => { setCustomDataDir(e.target.value); setManualSocketPath(''); }}
           placeholder={getDefaultDataDir(os)}
           className="w-full h-10 px-3 rounded-lg border border-input bg-background font-mono text-sm focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/15 outline-none transition-all"
         />
@@ -205,31 +188,18 @@ export function BitcoinSetup({ data, updateData, onNext }: StepProps) {
         </p>
       </div>
 
-      {/* IPC Socket Path - clickable to edit */}
+      {/* IPC Socket Path */}
       <div className="p-4 rounded-xl border border-border bg-muted/50">
         <label className="block text-sm font-medium mb-2">IPC Socket Path</label>
-        {isEditingPath ? (
-          <input
-            type="text"
-            value={manualSocketPath}
-            onChange={(e) => handlePathChange(e.target.value)}
-            onBlur={handlePathBlur}
-            autoFocus
-            className="w-full h-10 px-3 rounded-lg border border-input bg-background font-mono text-sm focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/15 outline-none transition-all"
-          />
-        ) : (
-          <button
-            onClick={handlePathClick}
-            className="w-full bg-background p-3 rounded-lg border border-input hover:border-primary/50 transition-colors text-left group"
-          >
-            <div className="flex items-center justify-between">
-              <code className="text-sm font-mono break-all">{socketPath}</code>
-              <Pencil className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ml-2" />
-            </div>
-          </button>
-        )}
+        <input
+          type="text"
+          value={socketPath}
+          onChange={(e) => setManualSocketPath(e.target.value)}
+          placeholder={computedSocketPath}
+          className="w-full h-10 px-3 rounded-lg border border-input bg-background font-mono text-sm focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/15 outline-none transition-all"
+        />
         <p className="text-xs text-muted-foreground mt-2">
-          Click to edit if your socket is in a different location.
+          Auto-computed based on OS and network. Edit if your socket is in a different location.
         </p>
       </div>
 

@@ -33,8 +33,12 @@ const STATE_FILE = path.join(CONFIG_DIR, 'state.json');
 app.use(cors());
 app.use(express.json());
 
-// Serve static files from the built UI (production)
-const UI_DIR = path.join(__dirname, '../../dist');
+// Serve static files from the built UI
+// In Docker (NODE_ENV=production): /app/public
+// In development: ../../dist (relative to server/dist/)
+const UI_DIR = process.env.NODE_ENV === 'production'
+  ? path.join(__dirname, '../public')
+  : path.join(__dirname, '../../dist');
 app.use(express.static(UI_DIR));
 
 /**
@@ -254,6 +258,59 @@ app.post('/api/reset', async (_req, res) => {
 });
 
 /**
+ * Get the URL for connecting to a container's API.
+ * Uses container name on sv2-network (Docker) or localhost (development).
+ */
+function getContainerUrl(containerName: string, port: number): string {
+  // In Docker, containers are on sv2-network and can be reached by name
+  // In development, containers expose ports on localhost
+  // Try container name first (works when sv2-ui is on sv2-network)
+  // The container name is the hostname on the Docker network
+  return process.env.NODE_ENV === 'production'
+    ? `http://${containerName}:${port}`
+    : `http://localhost:${port}`;
+}
+
+/**
+ * Proxy requests to Translator monitoring API
+ * This avoids CORS issues when the frontend is served from a different port
+ * /translator-api/v1/global -> http://sv2-translator:9092/api/v1/global
+ */
+app.use('/translator-api', async (req, res) => {
+  const targetUrl = `${getContainerUrl('sv2-translator', 9092)}/api${req.url}`;
+  try {
+    const response = await fetch(targetUrl, {
+      method: req.method,
+      headers: { 'Content-Type': 'application/json' },
+      signal: AbortSignal.timeout(5000),
+    });
+    const data = await response.text();
+    res.status(response.status).set('Content-Type', response.headers.get('Content-Type') || 'application/json').send(data);
+  } catch {
+    res.status(502).json({ error: 'Cannot connect to Translator monitoring API' });
+  }
+});
+
+/**
+ * Proxy requests to JDC monitoring API
+ * /jdc-api/v1/global -> http://sv2-jdc:9091/api/v1/global
+ */
+app.use('/jdc-api', async (req, res) => {
+  const targetUrl = `${getContainerUrl('sv2-jdc', 9091)}/api${req.url}`;
+  try {
+    const response = await fetch(targetUrl, {
+      method: req.method,
+      headers: { 'Content-Type': 'application/json' },
+      signal: AbortSignal.timeout(5000),
+    });
+    const data = await response.text();
+    res.status(response.status).set('Content-Type', response.headers.get('Content-Type') || 'application/json').send(data);
+  } catch {
+    res.status(502).json({ error: 'Cannot connect to JDC monitoring API' });
+  }
+});
+
+/**
  * SPA fallback - serve index.html for client-side routing
  */
 app.get('*', (_req, res) => {
@@ -262,8 +319,18 @@ app.get('*', (_req, res) => {
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`sv2-ui server running on http://localhost:${PORT}`);
-  console.log(`Config directory: ${CONFIG_DIR}`);
   const dockerConnection = getDockerConnectionInfo();
-  console.log(`Docker endpoint: ${dockerConnection.endpoint} (${dockerConnection.source})`);
+  
+  console.log('');
+  console.log(`Config directory: ${CONFIG_DIR}`);
+  console.log(`Docker: ${dockerConnection.endpoint} (${dockerConnection.source})`);
+  console.log('');
+  console.log('┌─────────────────────────────────────────────────────┐');
+  console.log('│                                                     │');
+  console.log('│   ⛏️  SV2 UI is ready!                               │');
+  console.log('│                                                     │');
+  console.log(`│   Open in browser: http://localhost:${PORT}             │`);
+  console.log('│                                                     │');
+  console.log('└─────────────────────────────────────────────────────┘');
+  console.log('');
 });
