@@ -77,8 +77,18 @@ export function PoolConfigStep({ data, updateData, onNext }: StepProps) {
 
   const pools = isSoloMode ? SOLO_POOLS : (isJdMode ? POOL_MINING_JD : POOL_MINING_NO_JD);
 
+  const defaultPool = pools.find(p => p.badge !== 'coming-soon') ?? null;
+
   const [isCustom, setIsCustom] = useState(false);
-  const [selectedPoolId, setSelectedPoolId] = useState<string | null>(null);
+  const [selectedPoolId, setSelectedPoolId] = useState<string | null>(() => {
+    if (data.pool?.address) return null; // already has a value from back-navigation
+    if (defaultPool) {
+      // pre-populate data so Continue is enabled immediately
+      setTimeout(() => updateData({ pool: { name: defaultPool.name, address: defaultPool.address, port: defaultPool.port, authority_public_key: defaultPool.authority_public_key } }), 0);
+      return defaultPool.id;
+    }
+    return null;
+  });
   const [customPool, setCustomPool] = useState<PoolConfig>({
     name: 'Custom Pool',
     address: '',
@@ -154,7 +164,7 @@ export function PoolConfigStep({ data, updateData, onNext }: StepProps) {
                 </div>
               )}
               <div className="flex items-start gap-4">
-                <div className={`p-2.5 rounded-xl flex items-center justify-center flex-shrink-0 ${isSelected ? 'bg-primary/10' : pool.logoOnDark ? 'bg-zinc-800' : 'bg-muted/50'}`} aria-hidden="true">
+                <div className={`p-2.5 rounded-xl flex items-center justify-center flex-shrink-0 ${pool.logoOnDark ? 'bg-zinc-800' : isSelected ? 'bg-primary/10' : 'bg-muted/50'}`} aria-hidden="true">
                   {pool.logoUrl ? (
                     <img
                       src={pool.logoUrl}
