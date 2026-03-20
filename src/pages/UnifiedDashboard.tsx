@@ -106,21 +106,22 @@ export function UnifiedDashboard() {
   // Shares data from upstream SERVER channels (shares sent TO the Pool)
   const shareStats = useMemo(() => {
     if (!serverChannels) {
-      return { accepted: 0, submitted: 0 };
+      return { acknowledged: 0, submitted: 0, rejected: 0 };
     }
     
-    // Shares accepted by the Pool
-    const extAccepted = serverChannels.extended_channels.reduce((sum, ch) => sum + ch.shares_accepted, 0);
-    const stdAccepted = serverChannels.standard_channels.reduce((sum, ch) => sum + ch.shares_accepted, 0);
+    const extAcknowledged = serverChannels.extended_channels.reduce((sum, ch) => sum + ch.shares_acknowledged, 0);
+    const stdAcknowledged = serverChannels.standard_channels.reduce((sum, ch) => sum + ch.shares_acknowledged, 0);
     
-    // Submitted = sum of shares_submitted across all upstream channels
     const extSubmitted = serverChannels.extended_channels.reduce((sum, ch) => sum + ch.shares_submitted, 0);
     const stdSubmitted = serverChannels.standard_channels.reduce((sum, ch) => sum + ch.shares_submitted, 0);
-    const submitted = extSubmitted + stdSubmitted;
+
+    const extRejected = serverChannels.extended_channels.reduce((sum, ch) => sum + ch.shares_rejected, 0);
+    const stdRejected = serverChannels.standard_channels.reduce((sum, ch) => sum + ch.shares_rejected, 0);
     
     return {
-      accepted: extAccepted + stdAccepted,
-      submitted,
+      acknowledged: extAcknowledged + stdAcknowledged,
+      submitted: extSubmitted + stdSubmitted,
+      rejected: extRejected + stdRejected,
     };
   }, [serverChannels]);
 
@@ -153,11 +154,6 @@ export function UnifiedDashboard() {
     ? (clientChannels?.total_extended || 0) + (clientChannels?.total_standard || 0)
     : activeCount;
   
-  // Calculate acceptance rate
-  const acceptanceRate = shareStats.submitted > 0 
-    ? ((shareStats.accepted / shareStats.submitted) * 100).toFixed(2) 
-    : '0.00';
-
   // Filter clients by search
   const filteredClients = useMemo(() => {
     if (!searchTerm) return allClients;
@@ -239,11 +235,14 @@ export function UnifiedDashboard() {
           title="Shares to Pool"
           value={
             <span>
-              {shareStats.accepted.toLocaleString()} 
-              <span className="text-muted-foreground text-lg"> / {shareStats.submitted.toLocaleString()}</span>
+              {shareStats.submitted.toLocaleString()}
+              {shareStats.rejected > 0 
+                ? <span className="text-red-500 text-lg font-normal"> ({shareStats.rejected} rejected)</span>
+                : <span className="text-green-500 text-lg font-normal"> (0 rejected)</span>
+              }
             </span>
           }
-          subtitle={`${acceptanceRate}% accepted via ${poolChannelCount} channel(s)`}
+          subtitle={`via ${poolChannelCount} channel(s)`}
         />
 
         <StatCard

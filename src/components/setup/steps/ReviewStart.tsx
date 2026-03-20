@@ -21,11 +21,17 @@ export function ReviewStart({ data, onComplete }: ReviewStartProps) {
     setIsStarting(true);
     setError(null);
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 300_000);
+
       const response = await fetch('/api/setup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
+
       const errorData = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(errorData.error || errorData.message || `Failed (${response.status})`);
       await queryClient.invalidateQueries({ queryKey: ['setup-status'] });
@@ -35,9 +41,13 @@ export function ReviewStart({ data, onComplete }: ReviewStartProps) {
     } catch (err) {
       let message = 'Failed to start services';
       if (err instanceof Error) {
-        message = err.message.includes('fetch') || err.message.includes('Network')
-          ? 'Cannot reach the server. Make sure the backend is running.'
-          : err.message;
+        if (err.name === 'AbortError') {
+          message = 'Request timed out. The containers may still be starting — check the terminal.';
+        } else if (err.message.includes('fetch') || err.message.includes('Network')) {
+          message = 'Cannot reach the server. Make sure the backend is running.';
+        } else {
+          message = err.message;
+        }
       }
       setError(message);
       setIsStarting(false);
@@ -170,7 +180,7 @@ export function ReviewStart({ data, onComplete }: ReviewStartProps) {
           {isStarting ? (
             <span className="flex items-center gap-2">
               <Loader2 className="h-4 w-4 animate-spin" />
-              Starting...
+              Starting (this may take a minute)...
             </span>
           ) : 'Start Mining'}
         </button>

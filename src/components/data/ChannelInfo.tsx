@@ -35,8 +35,8 @@ export function ChannelInfo({ channel, type: _type }: ChannelInfoProps) {
         value={formatDifficulty(channel.best_diff)} 
       />
       <InfoItem 
-        label="Shares Accepted" 
-        value={formatNumber(channel.shares_accepted)} 
+        label="Shares Acknowledged" 
+        value={formatNumber(channel.shares_acknowledged)} 
       />
       {hasSharesPerMinute && (
         <InfoItem 

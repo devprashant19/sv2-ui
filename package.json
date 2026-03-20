@@ -8,7 +8,7 @@
     "server"
   ],
   "scripts": {
-    "dev": "concurrently \"vite\" \"npm run dev --prefix server\"",
+    "dev": "concurrently --kill-signal SIGTERM --kill-others-on-fail \"vite\" \"npm run dev --prefix server\"",
     "dev:ui": "vite",
     "dev:server": "npm run dev --prefix server",
     "build": "tsc && vite build",

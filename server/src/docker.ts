@@ -147,6 +147,12 @@ const JDC_CONTAINER = 'sv2-jdc';
 const TRANSLATOR_IMAGE = 'stratumv2/translator_sv2:main';
 const JDC_IMAGE = 'stratumv2/jd_client_sv2:main';
 
+/**
+ * Detect if we're running inside a Docker container.
+ * When in Docker, we use shared volumes instead of host bind mounts.
+ */
+const isRunningInDocker = fs.existsSync('/.dockerenv');
+
 export function getDockerConnectionInfo(): DockerConnectionConfig {
   refreshDockerConnection();
   return dockerConnection;
@@ -165,19 +171,6 @@ async function ensureNetwork(): Promise<void> {
       Name: NETWORK_NAME,
       Driver: 'bridge',
     });
-  }
-}
-
-/**
- * Ensure the sv2-config volume exists
- */
-async function ensureConfigVolume(): Promise<void> {
-  try {
-    const volume = docker.getVolume(CONFIG_VOLUME);
-    await volume.inspect();
-  } catch {
-    console.log(`Creating volume ${CONFIG_VOLUME}...`);
-    await docker.createVolume({ Name: CONFIG_VOLUME });
   }
 }
 
@@ -284,19 +277,25 @@ async function getContainerStatus(name: string): Promise<ContainerStatus | null>
 }
 
 /**
- * Start the Translator container
- * Uses the shared sv2-config volume for config files
+ * Start the Translator container.
+ * - In Docker: uses shared volume (sv2-config) for config
+ * - In dev: bind-mounts config file from host filesystem
  */
-async function startTranslator(configFileName: string): Promise<void> {
+async function startTranslator(configPath: string): Promise<void> {
   await removeContainer(TRANSLATOR_CONTAINER);
+
+  const binds = isRunningInDocker
+    ? [`${CONFIG_VOLUME}:/config:ro`]
+    : [`${configPath}:/config/translator.toml:ro`];
 
   const container = await docker.createContainer({
     Image: TRANSLATOR_IMAGE,
     name: TRANSLATOR_CONTAINER,
     Entrypoint: ['/app/translator_sv2'],
-    Cmd: ['-c', `/config/${configFileName}`],
+    Cmd: ['-c', '/config/translator.toml'],
+    StopSignal: 'SIGINT',
     HostConfig: {
-      Binds: [`${CONFIG_VOLUME}:/config:ro`],
+      Binds: binds,
       PortBindings: {
         '34255/tcp': [{ HostPort: '34255' }],
         '9092/tcp': [{ HostPort: '9092' }],
@@ -315,25 +314,34 @@ async function startTranslator(configFileName: string): Promise<void> {
 }
 
 /**
- * Start the JDC container
- * Uses the shared sv2-config volume for config files
+ * Start the JDC container.
+ * - In Docker: uses shared volume (sv2-config) for config
+ * - In dev: bind-mounts config file from host filesystem
  */
 async function startJdc(
-  configFileName: string,
+  configPath: string,
   bitcoinSocketPath: string
 ): Promise<void> {
   await removeContainer(JDC_CONTAINER);
+
+  const binds = isRunningInDocker
+    ? [
+        `${CONFIG_VOLUME}:/config:ro`,
+        `${bitcoinSocketPath}:/root/.bitcoin/node.sock:ro`,
+      ]
+    : [
+        `${configPath}:/config/jdc.toml:ro`,
+        `${bitcoinSocketPath}:/root/.bitcoin/node.sock:ro`,
+      ];
 
   const container = await docker.createContainer({
     Image: JDC_IMAGE,
     name: JDC_CONTAINER,
     Entrypoint: ['/app/jd_client_sv2'],
-    Cmd: ['-c', `/config/${configFileName}`],
+    Cmd: ['-c', '/config/jdc.toml'],
+    StopSignal: 'SIGINT',
     HostConfig: {
-      Binds: [
-        `${CONFIG_VOLUME}:/config:ro`,
-        `${bitcoinSocketPath}:/root/.bitcoin/node.sock:ro`,
-      ],
+      Binds: binds,
       PortBindings: {
         '34265/tcp': [{ HostPort: '34265' }],
         '9091/tcp': [{ HostPort: '9091' }],
@@ -353,17 +361,16 @@ async function startJdc(
 
 /**
  * Start the mining stack
- * Config files should be written to the sv2-config volume before calling this
+ * Config files must already exist in configDir before calling this.
  */
 export async function startStack(
   data: SetupData,
-  _configDir: string
+  configDir: string
 ): Promise<void> {
   await ensureDockerAvailable();
 
-  // Ensure network and config volume exist
+  // Ensure network exists
   await ensureNetwork();
-  await ensureConfigVolume();
   // Connect sv2-ui to the network so it can proxy API requests
   await connectSv2UiToNetwork();
 
@@ -376,14 +383,13 @@ export async function startStack(
   // Start JDC first if in JD mode (Translator connects to JDC)
   if (data.mode === 'jd' && data.bitcoin) {
     const socketPath = expandHomePath(data.bitcoin.socket_path);
-    await startJdc('jdc.toml', socketPath);
-    // Wait for JDC to be ready before starting Translator
+    await startJdc(`${configDir}/jdc.toml`, socketPath);
     console.log('Waiting for JDC to initialize...');
     await new Promise(resolve => setTimeout(resolve, 3000));
   }
 
   // Start Translator
-  await startTranslator('translator.toml');
+  await startTranslator(`${configDir}/translator.toml`);
 }
 
 /**

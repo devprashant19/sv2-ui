@@ -86,7 +86,7 @@ export function UpstreamChannelTable({
                 {formatHashrate(channel.nominal_hashrate)}
               </TableCell>
               <TableCell className="text-right font-mono">
-                {formatNumber(channel.shares_accepted)}
+                {formatNumber(channel.shares_acknowledged)}
               </TableCell>
               <TableCell className="text-right font-mono hidden md:table-cell text-muted-foreground">
                 {formatDifficulty(channel.best_diff)}

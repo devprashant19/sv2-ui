@@ -45,6 +45,10 @@ ENV NODE_ENV=production
 ENV PORT=8080
 ENV CONFIG_DIR=/app/data/config
 
+# tini ensures proper signal handling (Ctrl+C works)
+RUN apk add --no-cache tini
+ENTRYPOINT ["/sbin/tini", "--"]
+
 EXPOSE 8080
 
 CMD ["node", "dist/index.js"]

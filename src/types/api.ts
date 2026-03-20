@@ -20,10 +20,12 @@ export interface ServerExtendedChannelInfo {
   full_extranonce_size: number;
   rollable_extranonce_size: number;
   version_rolling: boolean;
-  shares_accepted: number;
-  share_work_sum: number;
+  shares_acknowledged: number;
   shares_submitted: number;
+  shares_rejected: number;
+  share_work_sum: number;
   best_diff: number;
+  blocks_found: number;
 }
 
 /**
@@ -35,10 +37,12 @@ export interface ServerStandardChannelInfo {
   nominal_hashrate: number | null;
   target_hex: string;
   extranonce_prefix_hex: string;
-  shares_accepted: number;
-  share_work_sum: number;
+  shares_acknowledged: number;
   shares_submitted: number;
+  shares_rejected: number;
+  share_work_sum: number;
   best_diff: number;
+  blocks_found: number;
 }
 
 /**
@@ -90,10 +94,13 @@ export interface ExtendedChannelInfo {
   full_extranonce_size: number;
   rollable_extranonce_size: number;
   expected_shares_per_minute: number;
-  shares_accepted: number;
+  shares_acknowledged: number;
+  shares_submitted: number;
+  shares_rejected: number;
   share_work_sum: number;
   last_share_sequence_number: number;
   best_diff: number;
+  blocks_found: number;
   last_batch_accepted: number;
   last_batch_work_sum: number;
   share_batch_size: number;
@@ -110,10 +117,13 @@ export interface StandardChannelInfo {
   requested_max_target_hex: string;
   extranonce_prefix_hex: string;
   expected_shares_per_minute: number;
-  shares_accepted: number;
+  shares_acknowledged: number;
+  shares_submitted: number;
+  shares_rejected: number;
   share_work_sum: number;
   last_share_sequence_number: number;
   best_diff: number;
+  blocks_found: number;
   last_batch_accepted: number;
   last_batch_work_sum: number;
   share_batch_size: number;
