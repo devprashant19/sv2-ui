@@ -179,6 +179,13 @@ app.post('/api/setup', async (req, res) => {
     // Save state
     await saveState(data);
 
+    // Stop any running containers first (graceful shutdown order matters:
+    // JDC must be stopped before Translator to avoid crashing Bitcoin Core).
+    // This is critical when switching from JD mode to solo mining — without
+    // this, the old JDC container would be left running and crash when the
+    // Translator is replaced underneath it.
+    await stopStack();
+
     // Start the stack
     await startStack(data, CONFIG_DIR);
 
