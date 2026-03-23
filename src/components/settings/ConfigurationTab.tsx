@@ -233,15 +233,70 @@ export function ConfigurationTab() {
             </div>
           )}
 
-          {/* Username */}
-          {(config.translator?.user_identity || config.jdc?.user_identity) && (
-            <div className="p-4 rounded-lg border border-border/50 bg-muted/20">
-              <p className="font-medium mb-1">{isSoloMode ? 'Bitcoin Address' : 'Pool Username'}</p>
-              <p className="font-mono text-sm truncate">
-                {config.translator?.user_identity || config.jdc?.user_identity}
-              </p>
-            </div>
-          )}
+          {/* Username / Identity */}
+          {(config.translator?.user_identity || config.jdc?.user_identity) && (() => {
+            const identity = config.translator?.user_identity || config.jdc?.user_identity || '';
+
+            if (isSoloMode && (identity.startsWith('sri/solo/') || identity.startsWith('sri/donate'))) {
+              let addr = '';
+              let worker = '';
+              let donation = '';
+
+              if (identity.startsWith('sri/solo/')) {
+                const rest = identity.slice('sri/solo/'.length);
+                const idx = rest.indexOf('/');
+                addr = idx === -1 ? rest : rest.slice(0, idx);
+                worker = idx === -1 ? '' : rest.slice(idx + 1);
+                donation = '0%';
+              } else if (identity === 'sri/donate') {
+                donation = '100%';
+              } else if (identity.startsWith('sri/donate/')) {
+                const rest = identity.slice('sri/donate/'.length);
+                const parts = rest.split('/');
+                const pct = parseInt(parts[0], 10);
+                if (!isNaN(pct) && String(pct) === parts[0] && parts.length >= 2) {
+                  donation = `${pct}%`;
+                  addr = parts[1];
+                  worker = parts.slice(2).join('/');
+                } else {
+                  donation = '100%';
+                  worker = rest;
+                }
+              }
+
+              return (
+                <div className="p-4 rounded-lg border border-border/50 bg-muted/20 space-y-2">
+                  {addr && (
+                    <div>
+                      <p className="font-medium mb-1">Payout Address</p>
+                      <p className="font-mono text-sm truncate">{addr}</p>
+                    </div>
+                  )}
+                  {worker && (
+                    <div>
+                      <p className="font-medium mb-1">Worker Name</p>
+                      <p className="font-mono text-sm">{worker}</p>
+                    </div>
+                  )}
+                  <div>
+                    <p className="font-medium mb-1">Donation</p>
+                    <p className="text-sm">{donation}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">User Identity</p>
+                    <p className="font-mono text-xs text-muted-foreground truncate">{identity}</p>
+                  </div>
+                </div>
+              );
+            }
+
+            return (
+              <div className="p-4 rounded-lg border border-border/50 bg-muted/20">
+                <p className="font-medium mb-1">{isSoloMode ? 'Bitcoin Address' : 'Pool Username'}</p>
+                <p className="font-mono text-sm truncate">{identity}</p>
+              </div>
+            );
+          })()}
 
           {/* Bitcoin Core (JD mode) */}
           {isJdMode && config.bitcoin && (

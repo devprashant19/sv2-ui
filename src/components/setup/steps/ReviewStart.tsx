@@ -149,7 +149,49 @@ export function ReviewStart({ data, onComplete }: ReviewStartProps) {
         <div className="p-5 rounded-b-xl border-x border-b border-border bg-card">
           <SectionLabel n={isSoloMode ? '3' : (isJdMode ? '5' : '4')} label="Mining Identity" />
           <div className="text-sm text-muted-foreground space-y-1 pl-7">
-            <div className="font-mono text-xs">{data.translator?.user_identity ?? data.jdc?.user_identity ?? '—'}</div>
+            {(() => {
+              const identity = data.translator?.user_identity ?? data.jdc?.user_identity ?? '';
+              if (!identity) return <div className="font-mono text-xs">—</div>;
+
+              if (isSoloMode && (identity.startsWith('sri/solo/') || identity.startsWith('sri/donate'))) {
+                let addr = '';
+                let worker = '';
+                let donation = '';
+
+                if (identity.startsWith('sri/solo/')) {
+                  const rest = identity.slice('sri/solo/'.length);
+                  const idx = rest.indexOf('/');
+                  addr = idx === -1 ? rest : rest.slice(0, idx);
+                  worker = idx === -1 ? '' : rest.slice(idx + 1);
+                  donation = '0%';
+                } else if (identity === 'sri/donate') {
+                  donation = '100%';
+                } else if (identity.startsWith('sri/donate/')) {
+                  const rest = identity.slice('sri/donate/'.length);
+                  const parts = rest.split('/');
+                  const pct = parseInt(parts[0], 10);
+                  if (!isNaN(pct) && String(pct) === parts[0] && parts.length >= 2) {
+                    donation = `${pct}%`;
+                    addr = parts[1];
+                    worker = parts.slice(2).join('/');
+                  } else {
+                    donation = '100%';
+                    worker = rest;
+                  }
+                }
+
+                return (
+                  <>
+                    {addr && <div><span className="text-muted-foreground text-xs">Payout Address:</span> <span className="font-mono text-xs text-foreground">{addr}</span></div>}
+                    {worker && <div><span className="text-muted-foreground text-xs">Worker:</span> <span className="font-mono text-xs text-foreground">{worker}</span></div>}
+                    <div><span className="text-muted-foreground text-xs">Donation:</span> <span className="text-xs text-foreground">{donation}</span></div>
+                    <div className="font-mono text-xs text-muted-foreground/70 break-all">{identity}</div>
+                  </>
+                );
+              }
+
+              return <div className="font-mono text-xs">{identity}</div>;
+            })()}
             {isJdMode && data.jdc?.coinbase_reward_address && (
               <div className="font-mono text-xs text-muted-foreground/70">{data.jdc.coinbase_reward_address}</div>
             )}
