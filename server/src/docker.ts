@@ -398,9 +398,12 @@ export async function startStack(
 export async function stopStack(): Promise<void> {
   await ensureDockerAvailable();
 
-  // Stop Translator first (it depends on JDC)
-  await removeContainer(TRANSLATOR_CONTAINER);
+  // Stop JDC first so it receives SIGINT and gracefully closes its IPC
+  // connection to Bitcoin Core. If Translator is stopped first, JDC sees a
+  // SocketClosed error and tears down via the error path, which doesn't
+  // cleanly disconnect from Bitcoin Core and can crash it.
   await removeContainer(JDC_CONTAINER);
+  await removeContainer(TRANSLATOR_CONTAINER);
 }
 
 /**
