@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { StepProps, PoolConfig } from '../types';
-import { Check, Server } from 'lucide-react';
+import { Check } from 'lucide-react';
+import { PoolIcon } from '@/components/ui/pool-icon';
 
 interface KnownPool {
   id: string;
@@ -11,6 +12,7 @@ interface KnownPool {
   description: string;
   badge?: 'testing' | 'coming-soon';
   logoUrl?: string;
+  logoOnDark?: boolean; // true = white logo, needs dark container in light mode
 }
 
 const POOL_MINING_NO_JD: KnownPool[] = [
@@ -22,6 +24,7 @@ const POOL_MINING_NO_JD: KnownPool[] = [
     authority_public_key: '9awtMD5KQgvRUh2yFbjVeT7b6hjipWcAsQHd6wEhgtDT9soosna',
     description: 'Production SV2 pool by Braiins',
     logoUrl: '/braiins.svg',
+    logoOnDark: true,
   },
 ];
 
@@ -75,8 +78,18 @@ export function PoolConfigStep({ data, updateData, onNext }: StepProps) {
 
   const pools = isSoloMode ? SOLO_POOLS : (isJdMode ? POOL_MINING_JD : POOL_MINING_NO_JD);
 
+  const defaultPool = pools.find(p => p.badge !== 'coming-soon') ?? null;
+
   const [isCustom, setIsCustom] = useState(false);
-  const [selectedPoolId, setSelectedPoolId] = useState<string | null>(null);
+  const [selectedPoolId, setSelectedPoolId] = useState<string | null>(() => {
+    if (data.pool?.address) return null; // already has a value from back-navigation
+    if (defaultPool) {
+      // pre-populate data so Continue is enabled immediately
+      setTimeout(() => updateData({ pool: { name: defaultPool.name, address: defaultPool.address, port: defaultPool.port, authority_public_key: defaultPool.authority_public_key } }), 0);
+      return defaultPool.id;
+    }
+    return null;
+  });
   const [customPool, setCustomPool] = useState<PoolConfig>({
     name: 'Custom Pool',
     address: '',
@@ -152,17 +165,7 @@ export function PoolConfigStep({ data, updateData, onNext }: StepProps) {
                 </div>
               )}
               <div className="flex items-start gap-4">
-                <div className={`p-2.5 rounded-xl flex items-center justify-center flex-shrink-0 ${isSelected ? 'bg-primary/10' : 'bg-muted/50'}`} aria-hidden="true">
-                  {pool.logoUrl ? (
-                    <img
-                      src={pool.logoUrl}
-                      alt=""
-                      className="w-10 h-10 object-contain brightness-[0.3] dark:brightness-100"
-                      onError={(e) => { e.currentTarget.style.display = 'none'; (e.currentTarget.nextElementSibling as HTMLElement)?.classList.remove('hidden'); }}
-                    />
-                  ) : null}
-                  <Server className={`w-6 h-6 text-primary ${pool.logoUrl ? 'hidden' : ''}`} />
-                </div>
+                <PoolIcon logoUrl={pool.logoUrl} logoOnDark={pool.logoOnDark} name={pool.name} />
                 <div className="flex-1 min-w-0 pr-8">
                   <div className={`font-medium text-sm mb-1 ${isSelected ? 'text-primary' : ''}`}>{pool.name}</div>
                   <div className="text-xs text-muted-foreground leading-relaxed">{pool.description}</div>
@@ -175,8 +178,7 @@ export function PoolConfigStep({ data, updateData, onNext }: StepProps) {
           );
         })}
 
-        {!isSoloMode && (
-          <button
+        <button
             type="button"
             onClick={handleEnableCustom}
             aria-pressed={isCustom}
@@ -198,7 +200,6 @@ export function PoolConfigStep({ data, updateData, onNext }: StepProps) {
               <div className="text-xs text-muted-foreground leading-relaxed">Configure your own pool connection</div>
             </div>
           </button>
-        )}
       </div>
 
       {isCustom && (

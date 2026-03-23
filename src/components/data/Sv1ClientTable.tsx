@@ -18,7 +18,6 @@ interface Sv1ClientTableProps {
 /**
  * Table component for displaying SV1 clients connected to Translator.
  * SV1 clients are legacy mining hardware using Stratum V1 protocol.
- * Matches Replit UI styling - rounded-xl, glass effect, border-border/40.
  */
 export function Sv1ClientTable({ clients, isLoading }: Sv1ClientTableProps) {
   if (isLoading) {

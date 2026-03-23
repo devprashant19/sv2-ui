@@ -18,7 +18,6 @@ interface Sv2ClientTableProps {
 
 /**
  * Table component for displaying SV2 clients connected to JDC or Pool.
- * Matches Replit UI styling - rounded-xl, glass effect.
  */
 export function Sv2ClientTable({ clients, isLoading, onClientClick }: Sv2ClientTableProps) {
   if (isLoading) {

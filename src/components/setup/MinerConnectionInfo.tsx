@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Copy, Check, Wifi } from 'lucide-react';
+import { Copy, Check } from 'lucide-react';
 import { TRANSLATOR_PORT, JDC_PORT } from '@/lib/ports';
 
 function CopyableAddress({ address }: { address: string }) {
@@ -27,46 +27,34 @@ function CopyableAddress({ address }: { address: string }) {
 
 interface MinerConnectionInfoProps {
   isJdMode: boolean;
+  centered?: boolean;
 }
 
-export function MinerConnectionInfo({ isJdMode }: MinerConnectionInfoProps) {
+export function MinerConnectionInfo({ isJdMode, centered = false }: MinerConnectionInfoProps) {
   const translatorUrl = `stratum+tcp://<your-machine-ip>:${TRANSLATOR_PORT}`;
   const jdcUrl = `stratum+tcp://<your-machine-ip>:${JDC_PORT}`;
 
+  const hint = (
+    <p className="text-xs text-muted-foreground">
+      Replace <code className="font-mono bg-muted px-1 py-0.5 rounded text-foreground">&lt;your-machine-ip&gt;</code> with your local network IP (e.g. <code className="font-mono bg-muted px-1 py-0.5 rounded text-foreground">192.168.1.100</code>).
+    </p>
+  );
+
   return (
-    <div className="space-y-3">
-      {/* SV1 — always shown */}
-      <div className="p-5 rounded-xl border border-border bg-card space-y-3">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-            <Wifi className="w-4 h-4 text-primary" />
-          </div>
-          <div>
-            <div className="font-semibold text-sm">SV1 Firmware</div>
-            <div className="text-xs text-muted-foreground">Point to the Translator Proxy</div>
-          </div>
-        </div>
+    <div className={centered ? 'flex flex-wrap justify-center gap-3' : 'grid gap-3 md:grid-cols-2'}>
+      <div className={`p-4 rounded-xl border border-border bg-card space-y-2${centered ? ' w-full max-w-sm' : ''}`}>
+        <div className="font-semibold text-sm">SV1 Firmware</div>
+        <div className="text-xs text-muted-foreground">Point to the Translator Proxy</div>
         <CopyableAddress address={translatorUrl} />
-        <p className="text-xs text-muted-foreground">
-          Replace <code className="font-mono bg-muted-foreground/20 px-1 py-0.5 rounded">&lt;your-machine-ip&gt;</code> with
-          the local network IP of the machine running SV2{' '}
-          <span className="whitespace-nowrap">(e.g. <code className="font-mono bg-muted-foreground/20 px-1 py-0.5 rounded">192.168.1.100</code>)</span>.
-        </p>
+        {hint}
       </div>
 
-      {/* SV2 — only in JD mode */}
       {isJdMode && (
-        <div className="p-5 rounded-xl border border-border bg-card space-y-3">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-              <Wifi className="w-4 h-4 text-primary" />
-            </div>
-            <div>
-              <div className="font-semibold text-sm">SV2 Firmware</div>
-              <div className="text-xs text-muted-foreground">Point directly to the JD Client</div>
-            </div>
-          </div>
+        <div className={`p-4 rounded-xl border border-border bg-card space-y-2${centered ? ' w-full max-w-sm' : ''}`}>
+          <div className="font-semibold text-sm">SV2 Firmware</div>
+          <div className="text-xs text-muted-foreground">Point directly to the JD Client</div>
           <CopyableAddress address={jdcUrl} />
+          {hint}
         </div>
       )}
     </div>

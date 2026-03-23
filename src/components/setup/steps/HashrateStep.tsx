@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { StepProps } from '../types';
-import { HelpCircle, Check } from 'lucide-react';
+import { Check } from 'lucide-react';
 
 interface HashratePreset {
   id: string;
@@ -77,8 +77,7 @@ export function HashrateStep({ data, updateData, onNext }: StepProps) {
         </p>
       </div>
 
-      <div className="p-4 rounded-xl bg-muted/40 flex gap-3" role="note">
-        <HelpCircle className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" aria-hidden="true" />
+      <div className="p-4 rounded-xl bg-muted/40" role="note">
         <p className="text-sm text-muted-foreground">
           This sets the initial mining difficulty. The SV2 client will automatically adjust via vardiff.
         </p>

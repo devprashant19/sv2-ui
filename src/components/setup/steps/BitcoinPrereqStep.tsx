@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { StepProps } from '../types';
-import { Copy, Check, ExternalLink, Download, Zap, Clock } from 'lucide-react';
+import { Copy, Check, ExternalLink } from 'lucide-react';
 
 export function BitcoinPrereqStep({ onNext }: StepProps) {
   const [copiedMainnet, setCopiedMainnet] = useState(false);
@@ -40,8 +40,7 @@ export function BitcoinPrereqStep({ onNext }: StepProps) {
         <div className="flex gap-4 p-4 rounded-xl border border-border bg-card">
           <div className="w-7 h-7 rounded-full bg-primary/10 text-primary text-xs flex items-center justify-center font-mono flex-shrink-0 mt-0.5">1</div>
           <div className="flex-1 min-w-0">
-            <div className="font-medium text-sm mb-1 flex items-center gap-2">
-              <Download className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
+            <div className="font-medium text-sm mb-1">
               Install Bitcoin Core v30.2+
             </div>
             <p className="text-xs text-muted-foreground mb-2">
@@ -63,8 +62,7 @@ export function BitcoinPrereqStep({ onNext }: StepProps) {
         <div className="flex gap-4 p-4 rounded-xl border border-border bg-card">
           <div className="w-7 h-7 rounded-full bg-primary/10 text-primary text-xs flex items-center justify-center font-mono flex-shrink-0 mt-0.5">2</div>
           <div className="flex-1 min-w-0">
-            <div className="font-medium text-sm mb-3 flex items-center gap-2">
-              <Zap className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
+            <div className="font-medium text-sm mb-3">
               Start with IPC enabled
             </div>
 
@@ -118,8 +116,7 @@ export function BitcoinPrereqStep({ onNext }: StepProps) {
         <div className="flex gap-4 p-4 rounded-xl border border-border bg-card">
           <div className="w-7 h-7 rounded-full bg-primary/10 text-primary text-xs flex items-center justify-center font-mono flex-shrink-0 mt-0.5">3</div>
           <div className="flex-1">
-            <div className="font-medium text-sm flex items-center gap-2">
-              <Clock className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
+            <div className="font-medium text-sm">
               Wait for initial sync
             </div>
           </div>

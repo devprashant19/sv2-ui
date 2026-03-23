@@ -71,6 +71,9 @@ export function SetupWizard() {
   const [data, setData] = useState<SetupData>(initialSetupData);
   const [isReconfiguring, setIsReconfiguring] = useState(false);
   const [loadingConfig, setLoadingConfig] = useState(true);
+  // White flash: 0 = invisible, 1 = full white
+  const [flashOpacity, setFlashOpacity] = useState(0);
+  const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const dataRef = useRef(data);
   dataRef.current = data;
@@ -91,8 +94,24 @@ export function SetupWizard() {
   const handleNext = useCallback(() => {
     const steps = computeSteps(dataRef.current);
     const idx = steps.indexOf(currentStep);
-    if (idx < steps.length - 1) setCurrentStep(steps[idx + 1]);
+    if (idx >= steps.length - 1) return;
+
+    if (currentStep === 'mining-mode') {
+      // Fade to dark → switch step → fade in
+      setFlashOpacity(1);
+      flashTimerRef.current = setTimeout(() => {
+        setCurrentStep(steps[idx + 1]);
+        setFlashOpacity(0);
+      }, 300);
+      return;
+    }
+
+    setCurrentStep(steps[idx + 1]);
   }, [currentStep]);
+
+  useEffect(() => () => {
+    if (flashTimerRef.current) clearTimeout(flashTimerRef.current);
+  }, []);
 
   const handleBack = useCallback(() => {
     const steps = computeSteps(dataRef.current);
@@ -127,12 +146,33 @@ export function SetupWizard() {
     );
   }
 
+  // White flash overlay — persists across step changes so it fades out over the new step
+  const flashOverlay = (
+    <div
+      aria-hidden
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 200,
+        pointerEvents: 'none',
+        background: 'radial-gradient(circle at 50% 42%, hsl(var(--primary) / 0.10) 0%, hsl(var(--background)) 55%)',
+        opacity: flashOpacity,
+        transition: flashOpacity === 1
+          ? 'opacity 0.25s cubic-bezier(0.4, 0, 1, 1)'
+          : 'opacity 0.45s cubic-bezier(0, 0, 0.2, 1)',
+      }}
+    />
+  );
+
   if (currentStep === 'mining-mode') {
     return (
-      <div className="relative">
-        <div className="absolute top-3 right-4 z-10"><ThemeToggle isDark={isDark} toggle={toggle} /></div>
-        <MiningModeSelection {...stepProps} />
-      </div>
+      <>
+        <div className="relative">
+          <div className="absolute top-3 right-4 z-10"><ThemeToggle isDark={isDark} toggle={toggle} /></div>
+          <MiningModeSelection {...stepProps} />
+        </div>
+        {flashOverlay}
+      </>
     );
   }
 
@@ -141,6 +181,7 @@ export function SetupWizard() {
   const dotIndex = currentStepIndex - 1;
 
   return (
+    <>
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <div className="flex items-center px-6 md:px-10 h-14 border-b border-border/40 flex-shrink-0">
@@ -178,7 +219,7 @@ export function SetupWizard() {
       {/* Step content */}
       <div className="flex-1 flex flex-col overflow-y-auto">
         <div className="flex-1 flex flex-col items-center justify-center px-6 py-10">
-          <div className="w-full max-w-xl">
+          <div key={currentStep} className="w-full max-w-xl animate-fade-in-up">
             {isReconfiguring && currentStepIndex === 1 && (
               <div className="mb-6 p-3 rounded-xl bg-warning/[0.08] text-sm text-warning flex gap-2 items-start">
                 <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" aria-hidden="true" />
@@ -196,5 +237,7 @@ export function SetupWizard() {
         </div>
       </div>
     </div>
+    {flashOverlay}
+    </>
   );
 }

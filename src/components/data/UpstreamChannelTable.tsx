@@ -18,7 +18,6 @@ interface UpstreamChannelTableProps {
 /**
  * Table component for displaying upstream connection channels.
  * Shows channels to the upstream server (Pool for JDC, Pool or JDC for Translator).
- * Matches Replit UI styling - rounded-xl, glass effect.
  */
 export function UpstreamChannelTable({
   extendedChannels,

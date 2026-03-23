@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StepProps } from '../types';
-import { CheckCircle2, Server, Bitcoin, Loader2, AlertCircle } from 'lucide-react';
+import { CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { MinerConnectionInfo } from '../MinerConnectionInfo';
 
@@ -44,20 +44,24 @@ export function ReviewStart({ data, onComplete }: ReviewStartProps) {
     }
   };
 
+  const [countdown, setCountdown] = useState(5);
+
+  useEffect(() => {
+    if (!started) return;
+    if (countdown === 0) { onComplete(); return; }
+    const t = setTimeout(() => setCountdown(c => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [started, countdown, onComplete]);
+
   if (started) {
     return (
       <div className="space-y-8">
         <div className="text-center">
-          <div className="flex justify-center mb-4">
-            <div className="w-14 h-14 rounded-full bg-green-500/10 flex items-center justify-center">
-              <CheckCircle2 className="w-7 h-7 text-green-500" />
-            </div>
-          </div>
-          <h2 className="text-2xl md:text-3xl font-semibold tracking-tight mb-3">Stack is running!</h2>
+          <h2 className="text-2xl md:text-3xl font-semibold tracking-tight mb-3">Client is running!</h2>
           <p className="text-lg text-muted-foreground">Point your mining devices to the addresses below</p>
         </div>
-        <MinerConnectionInfo isJdMode={isJdMode} />
-        <div className="flex justify-center">
+        <MinerConnectionInfo isJdMode={isJdMode} centered />
+        <div className="flex flex-col items-center gap-2">
           <button
             type="button"
             onClick={onComplete}
@@ -65,6 +69,7 @@ export function ReviewStart({ data, onComplete }: ReviewStartProps) {
           >
             Go to Dashboard
           </button>
+          <p className="text-xs text-muted-foreground">Redirecting in {countdown}s…</p>
         </div>
       </div>
     );
@@ -81,7 +86,7 @@ export function ReviewStart({ data, onComplete }: ReviewStartProps) {
     <div className="space-y-8">
       <div className="text-center">
         <h2 className="text-2xl md:text-3xl font-semibold tracking-tight mb-3">Review & Start</h2>
-        <p className="text-lg text-muted-foreground">Review your configuration and start the SV2 stack</p>
+        <p className="text-lg text-muted-foreground">Review your configuration and start the SV2 client</p>
       </div>
 
       {error && (
@@ -112,7 +117,7 @@ export function ReviewStart({ data, onComplete }: ReviewStartProps) {
 
         {data.pool && (
           <div className="p-5 border-x border-b border-border bg-card">
-            <SectionLabel n={isSoloMode ? '2' : '3'} label={<><Server className="w-3.5 h-3.5 inline mr-1" />{isSoloMode ? 'Solo Pool' : 'Pool'}</>} />
+            <SectionLabel n={isSoloMode ? '2' : '3'} label={isSoloMode ? 'Solo Pool' : 'Pool'} />
             <div className="text-sm text-muted-foreground space-y-1 pl-7">
               <div><span className="text-foreground">{data.pool.name || 'Custom'}</span></div>
               <div className="font-mono text-xs">{data.pool.address}:{data.pool.port}</div>
@@ -125,7 +130,7 @@ export function ReviewStart({ data, onComplete }: ReviewStartProps) {
           <div className="p-5 border-x border-b border-border bg-card">
             <SectionLabel n="4" label="Bitcoin Core" />
             <div className="text-sm text-muted-foreground space-y-1 pl-7">
-              <div className="flex items-center gap-1"><Bitcoin className="w-3 h-3 text-orange-500" />{data.bitcoin.network}</div>
+              <div>{data.bitcoin.network}</div>
               <div className="font-mono text-xs truncate">{data.bitcoin.socket_path}</div>
             </div>
           </div>

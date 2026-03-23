@@ -18,7 +18,6 @@ interface StatCardProps {
 
 /**
  * A card component for displaying a single statistic.
- * Matches Replit UI styling - glass-card with border-none.
  */
 export function StatCard({
   title,

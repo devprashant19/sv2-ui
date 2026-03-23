@@ -6,12 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { useSetupStatus } from '@/hooks/useSetupStatus';
 import { useControlApi, getCurrentConfig } from '@/hooks/useControlApi';
 import type { SetupData } from '@/components/setup/types';
-import { 
-  Settings2, 
-  Cpu,
-  Zap,
-  Server, 
-  Bitcoin,
+import {
   Loader2,
   AlertCircle,
   RotateCw,
@@ -76,15 +71,12 @@ export function ConfigurationTab() {
       <div className="space-y-6 animate-in slide-in-from-left-2 duration-300">
         <Card className="border-dashed">
           <CardContent className="pt-6">
-            <div className="flex gap-3">
-              <Settings2 className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
-              <div className="text-sm text-muted-foreground">
-                <p className="font-medium text-foreground mb-1">Standalone Mode</p>
-                <p>
-                  This UI is running in monitoring-only mode. Configuration management is not available.
-                  Services should be configured and started manually.
-                </p>
-              </div>
+            <div className="text-sm text-muted-foreground">
+              <p className="font-medium text-foreground mb-1">Standalone Mode</p>
+              <p>
+                This UI is running in monitoring-only mode. Configuration management is not available.
+                Services should be configured and started manually.
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -104,7 +96,7 @@ export function ConfigurationTab() {
                 <div className="text-sm">
                   <p className="font-medium text-primary mb-1">Not Configured</p>
                   <p className="text-muted-foreground">
-                    No configuration found. Run the setup wizard to configure your mining stack.
+                    No configuration found. Run the setup wizard to configure your mining client.
                   </p>
                 </div>
                 <Button onClick={() => navigate('/setup')}>
@@ -124,13 +116,6 @@ export function ConfigurationTab() {
 
   const isJdMode = mode === 'jd';
   const isSoloMode = miningMode === 'solo';
-
-  const getPoolIconUrl = (poolName: string): string | null => {
-    if (poolName.includes('Braiins')) return '/braiins.svg';
-    if (poolName.includes('SRI')) return '/favicon.png';
-    if (poolName.includes('Blitzpool')) return '/blitzpool.svg';
-    return null;
-  };
 
   return (
     <div className="space-y-6 animate-in slide-in-from-left-2 duration-300">
@@ -209,11 +194,8 @@ export function ConfigurationTab() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="flex items-center gap-2">
-                <Settings2 className="h-5 w-5 text-primary" />
-                Current Configuration
-              </CardTitle>
-              <CardDescription>Your active mining stack setup</CardDescription>
+              <CardTitle>Current Configuration</CardTitle>
+              <CardDescription>Your active mining client setup</CardDescription>
             </div>
             <div className="flex gap-2">
               <Button variant="outline" onClick={handleReconfigure}>
@@ -229,19 +211,12 @@ export function ConfigurationTab() {
         <CardContent className="space-y-4">
           {/* Mining Mode */}
           <div className="flex items-center justify-between p-4 rounded-lg border border-border/50 bg-muted/20">
-            <div className="flex items-center gap-3">
-              {isSoloMode ? (
-                <Cpu className="h-5 w-5 text-orange-500" />
-              ) : (
-                <Zap className="h-5 w-5 text-blue-500" />
-              )}
-              <div>
-                <p className="font-medium">Mining Mode</p>
-                <p className="text-sm text-muted-foreground">
-                  {isSoloMode ? 'Solo Mining' : 'Pool Mining'}
-                  {isJdMode && ' (Job Declaration)'}
-                </p>
-              </div>
+            <div>
+              <p className="font-medium">Mining Mode</p>
+              <p className="text-sm text-muted-foreground">
+                {isSoloMode ? 'Solo Mining' : 'Pool Mining'}
+                {isJdMode && ' (Job Declaration)'}
+              </p>
             </div>
             <Badge variant={isSoloMode ? 'default' : 'secondary'}>
               {isSoloMode ? 'Solo' : 'Pool'}
@@ -250,35 +225,18 @@ export function ConfigurationTab() {
 
           {/* Pool */}
           {config.pool && (
-            <div className="p-4 rounded-lg border border-border/50 bg-muted/20 space-y-2">
-              <div className="flex items-center gap-3">
-                <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-muted/50 overflow-hidden">
-                  {getPoolIconUrl(config.pool.name) ? (
-                    <img
-                      src={getPoolIconUrl(config.pool.name)!}
-                      alt={`${config.pool.name} logo`}
-                      className="w-8 h-8 object-contain"
-                    />
-                  ) : (
-                    <Server className="h-5 w-5 text-muted-foreground" />
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium">{config.pool.name}</p>
-                  <p className="text-muted-foreground font-mono text-xs">
-                    {config.pool.address}:{config.pool.port}
-                  </p>
-                </div>
-              </div>
+            <div className="p-4 rounded-lg border border-border/50 bg-muted/20">
+              <p className="font-medium">{config.pool.name}</p>
+              <p className="text-muted-foreground font-mono text-xs">
+                {config.pool.address}:{config.pool.port}
+              </p>
             </div>
           )}
 
           {/* Username */}
           {(config.translator?.user_identity || config.jdc?.user_identity) && (
-            <div className="p-4 rounded-lg border border-border/50 bg-muted/20 space-y-2">
-              <div className="flex items-center gap-2">
-                <p className="font-medium">{isSoloMode ? 'Bitcoin Address' : 'Pool Username'}</p>
-              </div>
+            <div className="p-4 rounded-lg border border-border/50 bg-muted/20">
+              <p className="font-medium mb-1">{isSoloMode ? 'Bitcoin Address' : 'Pool Username'}</p>
               <p className="font-mono text-sm truncate">
                 {config.translator?.user_identity || config.jdc?.user_identity}
               </p>
@@ -289,24 +247,19 @@ export function ConfigurationTab() {
           {isJdMode && config.bitcoin && (
             <div className="p-4 rounded-lg border border-border/50 bg-muted/20 space-y-2">
               <div className="flex items-center gap-2">
-                <Bitcoin className="h-5 w-5 text-orange-500" />
                 <p className="font-medium">Bitcoin Core</p>
+                <Badge variant="outline" className="text-xs">{config.bitcoin.network}</Badge>
               </div>
-              <div className="text-sm space-y-1">
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="text-xs">{config.bitcoin.network}</Badge>
-                </div>
-                <p className="text-muted-foreground font-mono text-xs truncate">
-                  {config.bitcoin.socket_path}
-                </p>
-              </div>
+              <p className="text-muted-foreground font-mono text-xs truncate">
+                {config.bitcoin.socket_path}
+              </p>
             </div>
           )}
 
           {/* Fallback Address (JD mode) */}
           {isJdMode && config.jdc?.coinbase_reward_address && (
-            <div className="p-4 rounded-lg border border-border/50 bg-muted/20 space-y-2">
-              <p className="font-medium">Fallback Address</p>
+            <div className="p-4 rounded-lg border border-border/50 bg-muted/20">
+              <p className="font-medium mb-1">Fallback Address</p>
               <p className="text-muted-foreground font-mono text-xs truncate">
                 {config.jdc.coinbase_reward_address}
               </p>
