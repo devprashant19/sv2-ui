@@ -5,14 +5,10 @@ import { Shell } from '@/components/layout/Shell';
 import { StatCard } from '@/components/data/StatCard';
 import { HashrateChart } from '@/components/data/HashrateChart';
 import { Sv1ClientTable } from '@/components/data/Sv1ClientTable';
-import { 
-  usePoolData, 
-  useSv1ClientsData, 
-  useTranslatorHealth,
-  useJdcHealth,
-} from '@/hooks/usePoolData';
+import { usePoolData, useSv1ClientsData, useTranslatorHealth, useJdcHealth } from '@/hooks/usePoolData';
 import { useHashrateHistory } from '@/hooks/useHashrateHistory';
 import { useSetupStatus } from '@/hooks/useSetupStatus';
+import { useConnectionStatus } from '@/hooks/useConnectionStatus';
 import { formatHashrate, formatDifficulty } from '@/lib/utils';
 import type { Sv1ClientInfo } from '@/types/api';
 /**
@@ -33,8 +29,11 @@ export function UnifiedDashboard() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 15;
 
-  // Get configured template mode and pool name from setup status
-  const { isOrchestrated, isConfigured, isRunning, mode: templateMode, poolName } = useSetupStatus();
+  // Get configured template mode from setup status
+  const { isOrchestrated, isConfigured, isRunning, mode: templateMode } = useSetupStatus();
+
+  // Header connection status (shared with Settings via hook)
+  const { status: connectionStatus, poolName, uptime } = useConnectionStatus();
 
   // Data from JDC or Translator depending on configured mode
   const {
@@ -52,29 +51,14 @@ export function UnifiedDashboard() {
     isLoading: sv1Loading,
   } = useSv1ClientsData(0, 1000); // Fetch all for client-side filtering
 
-  // Health checks for status indicators
-  // Only check JDC health if in JD mode (avoids unnecessary probing in No-JD mode)
-  const {
-    data: translatorOk,
-    isLoading: translatorHealthLoading,
-    isError: translatorHealthError,
-  } = useTranslatorHealth();
-  const {
-    data: jdcOk,
-    isLoading: jdcHealthLoading,
-    isError: jdcHealthError,
-  } = useJdcHealth(isJdMode); // Only probe JDC when in JD mode
-
-  // Derive per-service error state from health checks.
-  // A service is considered down when:
-  //   - its health query has finished loading (!isLoading), AND
-  //   - there is no confirmed healthy response (`data !== true`) OR
-  //   - the query is in error state (covers both initial and refetch failures)
+  // Health checks for the error banner (React Query deduplicates the API calls)
+  const { data: translatorOk, isLoading: translatorHealthLoading, isError: translatorHealthError } = useTranslatorHealth();
+  const { data: jdcOk, isLoading: jdcHealthLoading, isError: jdcHealthError } = useJdcHealth(isJdMode);
   const translatorHealthy = translatorOk === true && !translatorHealthError;
-  const jdcHealthy = jdcOk === true && !jdcHealthError;
-  const translatorDown = !translatorHealthLoading && !translatorHealthy;
-  const jdcDown = isJdMode && !jdcHealthLoading && !jdcHealthy;
-  const showError = poolError || translatorDown || jdcDown;
+  const jdcHealthy        = jdcOk === true && !jdcHealthError;
+  const translatorDown    = !translatorHealthLoading && !translatorHealthy;
+  const jdcDown           = isJdMode && !jdcHealthLoading && !jdcHealthy;
+  const showError         = poolError || translatorDown || jdcDown;
   const configuredButStopped = isOrchestrated && isConfigured && !isRunning;
   const [isStarting, setIsStarting] = useState(false);
 
@@ -115,8 +99,6 @@ export function UnifiedDashboard() {
   const totalClientChannels = isJdMode 
     ? (poolGlobal?.sv2_clients?.total_channels || 0)
     : activeCount;
-
-  const uptime = poolGlobal?.uptime_secs || 0;
 
   // Build hashrate history from real-time data
   const hashrateHistory = useHashrateHistory(totalHashrate);
@@ -193,14 +175,10 @@ export function UnifiedDashboard() {
     return filteredClients.slice(start, start + itemsPerPage);
   }, [filteredClients, currentPage, itemsPerPage]);
 
-  // Determine if pool is connected (healthy stack means pool connection is working)
-  const isHealthLoading = translatorHealthLoading || (isJdMode && jdcHealthLoading);
-  const isPoolConnected = isJdMode ? (translatorHealthy && jdcHealthy) : translatorHealthy;
-
   return (
     <Shell
       appMode="translator"
-      connectionStatus={isHealthLoading ? 'connecting' : isPoolConnected ? 'connected' : 'disconnected'}
+      connectionStatus={connectionStatus}
       poolName={poolName ?? undefined}
       uptime={uptime}
     >

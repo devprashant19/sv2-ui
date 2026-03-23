@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import { useUiConfig } from '@/hooks/useUiConfig';
+import { useConnectionStatus } from '@/hooks/useConnectionStatus';
 import {
   CheckCircle2,
   RotateCcw,
@@ -17,6 +18,7 @@ import { ConfigurationTab } from '@/components/settings/ConfigurationTab';
  */
 export function Settings() {
   const { config, updateConfig, resetConfig } = useUiConfig();
+  const { status: connectionStatus, poolName, uptime } = useConnectionStatus();
   const logoInputRef = useRef<HTMLInputElement>(null);
 
   const [showSaved, setShowSaved] = useState(false);
@@ -46,7 +48,11 @@ export function Settings() {
   const primaryHex = hslToHex(config.primaryColor);
 
   return (
-    <Shell>
+    <Shell
+      connectionStatus={connectionStatus}
+      poolName={poolName ?? undefined}
+      uptime={uptime}
+    >
       <div className="max-w-5xl mx-auto space-y-8">
         <div className="flex items-center justify-between">
           <div>
