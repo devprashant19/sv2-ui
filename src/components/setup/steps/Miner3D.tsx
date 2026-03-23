@@ -135,13 +135,22 @@ export function Miner3D({ phase }: Miner3DProps) {
   const isOff    = !powered;
   const isActive = powered && phase === 'arming';
 
+  // Border flash: briefly spike opacity on activation for electrical surge feel
+  const [borderFlash, setBorderFlash] = useState(false);
+  useEffect(() => {
+    if (!isActive) { setBorderFlash(false); return; }
+    setBorderFlash(true);
+    const t = setTimeout(() => setBorderFlash(false), 140);
+    return () => clearTimeout(t);
+  }, [isActive]);
+
   // Sync target velocity when power or arming state changes
   useEffect(() => {
     if (isOff) {
       targetRef.current = 0;           // coast to full stop
     } else if (isActive) {
-      velRef.current    = ACTIVE_VEL;  // snap immediately to full speed
-      targetRef.current = ACTIVE_VEL;
+      velRef.current    = MAX_VEL * 1.8;  // overshoot: turbine rev spike
+      targetRef.current = ACTIVE_VEL;    // friction decays back to cruise
     } else {
       targetRef.current = IDLE_VEL;   // friction coasts back to idle
     }
@@ -215,7 +224,7 @@ export function Miner3D({ phase }: Miner3DProps) {
 
   // ── Style helpers ───────────────────────────────────────────────────────────
   const C   = 'hsl(var(--primary))';
-  const bOp = isActive ? '0.88' : isOff ? '0.18' : '0.55';
+  const bOp = borderFlash ? '1.0' : isActive ? '0.88' : isOff ? '0.18' : '0.55';
 
   const glow = isActive
     ? '0 0 20px hsl(var(--primary) / 0.80), 0 0 48px hsl(var(--primary) / 0.25)'
@@ -236,7 +245,7 @@ export function Miner3D({ phase }: Miner3DProps) {
     background:         'hsl(var(--primary) / 0.018)',
     backfaceVisibility: 'hidden',
     boxShadow:          glow,
-    transition:         'box-shadow 0.4s ease',
+    transition:         isActive ? 'box-shadow 0.15s ease-out, border-color 0.1s ease-out' : 'box-shadow 0.5s ease, border-color 0.3s ease',
     transform:          t,
   });
 
@@ -265,7 +274,7 @@ export function Miner3D({ phase }: Miner3DProps) {
     background:         'hsl(var(--primary) / 0.025)',
     backfaceVisibility: 'hidden',
     boxShadow:          glow,
-    transition:         'box-shadow 0.4s ease',
+    transition:         isActive ? 'box-shadow 0.15s ease-out, border-color 0.1s ease-out' : 'box-shadow 0.5s ease, border-color 0.3s ease',
     transform:          t,
   });
 
@@ -282,6 +291,7 @@ export function Miner3D({ phase }: Miner3DProps) {
         cursor:         dragging ? 'grabbing' : 'grab',
         userSelect:     'none',
         touchAction:    'none',
+        position:       'relative',
       }}
       onPointerDown={onPD}
       onPointerMove={onPM}
@@ -289,6 +299,23 @@ export function Miner3D({ phase }: Miner3DProps) {
       onPointerCancel={onPU}
       onDoubleClick={() => setRot(DEF_ROT)}
     >
+      {/* Glow bloom — sibling to 3D scene so filter never flattens preserve-3d */}
+      <div
+        aria-hidden
+        style={{
+          position:      'absolute',
+          inset:         '-15%',
+          borderRadius:  '50%',
+          background:    'radial-gradient(ellipse at center, hsl(var(--primary) / 0.55) 0%, transparent 65%)',
+          filter:        'blur(28px)',
+          animation:     isActive ? 'miner-glow-bloom 0.55s ease-out forwards' : 'none',
+          opacity:       isActive ? undefined : 0,
+          pointerEvents: 'none',
+        }}
+      />
+
+      {/* Vibration wrapper — 5 quick shakes (~450 ms) then stops naturally */}
+      <div style={{ animation: isActive ? 'miner-vibrate 0.09s linear 5' : 'none' }}>
       <div style={{ perspective: '1100px' }}>
         <div style={{
           width:          W,
@@ -436,6 +463,7 @@ export function Miner3D({ phase }: Miner3DProps) {
 
         </div>
       </div>
+      </div>{/* end vibration wrapper */}
     </div>
   );
 }

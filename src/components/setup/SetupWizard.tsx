@@ -155,11 +155,11 @@ export function SetupWizard() {
         inset: 0,
         zIndex: 200,
         pointerEvents: 'none',
-        background: 'hsl(var(--background))',
+        background: 'radial-gradient(circle at 50% 42%, hsl(var(--primary) / 0.10) 0%, hsl(var(--background)) 55%)',
         opacity: flashOpacity,
         transition: flashOpacity === 1
-          ? 'opacity 0.3s ease-in'
-          : 'opacity 0.4s ease-out',
+          ? 'opacity 0.25s cubic-bezier(0.4, 0, 1, 1)'
+          : 'opacity 0.45s cubic-bezier(0, 0, 0.2, 1)',
       }}
     />
   );
