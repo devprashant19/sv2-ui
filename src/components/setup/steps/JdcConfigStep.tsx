@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { StepProps, JdcConfig } from '../types';
 import { Info } from 'lucide-react';
+import { isValidBitcoinAddress, getBitcoinAddressError } from '@/lib/utils';
 
 export function JdcConfigStep({ data, updateData, onNext }: StepProps) {
   const [config, setConfig] = useState<JdcConfig>(
@@ -19,9 +20,11 @@ export function JdcConfigStep({ data, updateData, onNext }: StepProps) {
     setConfig({ ...config, [field]: value });
   };
 
-  const isValid = 
-    config.user_identity.length > 0 && 
-    config.coinbase_reward_address.length > 0;
+  const network = data.bitcoin?.network ?? 'mainnet';
+
+  const isValid =
+    config.user_identity.length > 0 &&
+    isValidBitcoinAddress(config.coinbase_reward_address, network);
 
   return (
     <div className="space-y-8">
@@ -82,6 +85,9 @@ export function JdcConfigStep({ data, updateData, onNext }: StepProps) {
             autoComplete="off"
             className="w-full h-10 px-3 rounded-lg border border-input bg-background font-mono text-sm focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/15 outline-none transition-all"
           />
+          {getBitcoinAddressError(config.coinbase_reward_address, network) && (
+            <p className="text-xs text-destructive mt-1">{getBitcoinAddressError(config.coinbase_reward_address, network)}</p>
+          )}
           <p className="text-xs text-muted-foreground mt-2">
             Bitcoin address for receiving mining rewards (fallback for solo mining)
           </p>
