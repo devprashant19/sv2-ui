@@ -40,8 +40,16 @@ export function MinerConnectionInfo({ isJdMode, centered = false }: MinerConnect
     </p>
   );
 
+  // When only one card is shown (SV1-only mode) it should stretch to full width.
+  // In JD mode two cards sit side-by-side on md+ screens.
+  const wrapperClass = centered
+    ? 'flex flex-wrap justify-center gap-3'
+    : isJdMode
+      ? 'grid gap-3 md:grid-cols-2'
+      : 'grid gap-3';
+
   return (
-    <div className={centered ? 'flex flex-wrap justify-center gap-3' : 'grid gap-3 md:grid-cols-2'}>
+    <div className={wrapperClass}>
       <div className={`p-4 rounded-xl border border-border bg-card space-y-2${centered ? ' w-full max-w-sm' : ''}`}>
         <div className="font-semibold text-sm">SV1 Firmware</div>
         <div className="text-xs text-muted-foreground">Point to the Translator Proxy</div>

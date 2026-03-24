@@ -30,25 +30,20 @@ export function Sv1ClientTable({ clients, isLoading }: Sv1ClientTableProps) {
     );
   }
 
-  if (clients.length === 0) {
-    return (
-      <div className="rounded-xl border border-border/40 bg-card/40 backdrop-blur-sm overflow-hidden shadow-sm">
+  return (
+    <div className="rounded-xl border border-border/40 bg-card/40 backdrop-blur-sm overflow-hidden shadow-sm">
+      {clients.length === 0 ? (
         <div className="p-8 text-center text-muted-foreground">
           No SV1 clients connected
         </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="rounded-xl border border-border/40 bg-card/40 backdrop-blur-sm overflow-hidden shadow-sm">
+      ) : (
       <Table>
         <TableHeader className="bg-muted/30">
           <TableRow className="hover:bg-transparent border-border/40">
             <TableHead className="w-[80px]">ID</TableHead>
             <TableHead>Worker Name</TableHead>
             <TableHead>User Identity</TableHead>
-            <TableHead className="text-right">Hashrate</TableHead>
+            <TableHead>Hashrate</TableHead>
             <TableHead className="hidden md:table-cell">Channel</TableHead>
             <TableHead className="hidden lg:table-cell">Extranonce1</TableHead>
             <TableHead className="hidden xl:table-cell">Version Rolling</TableHead>
@@ -72,7 +67,7 @@ export function Sv1ClientTable({ clients, isLoading }: Sv1ClientTableProps) {
               <TableCell className="text-muted-foreground">
                 {client.user_identity || '-'}
               </TableCell>
-              <TableCell className="text-right font-mono">
+              <TableCell className="font-mono">
                 {client.hashrate !== null ? formatHashrate(client.hashrate) : '-'}
               </TableCell>
               <TableCell className="hidden md:table-cell font-mono text-xs text-muted-foreground">
@@ -96,6 +91,7 @@ export function Sv1ClientTable({ clients, isLoading }: Sv1ClientTableProps) {
           ))}
         </TableBody>
       </Table>
+      )}
     </div>
   );
 }

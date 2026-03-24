@@ -232,17 +232,48 @@ export function UnifiedDashboard() {
         />
 
         <StatCard
-          title="Shares to Pool"
-          value={
-            <span>
-              {shareStats.submitted.toLocaleString()}
-              {shareStats.rejected > 0 
-                ? <span className="text-red-500 text-lg font-normal"> ({shareStats.rejected} rejected)</span>
-                : <span className="text-green-500 text-lg font-normal"> (0 rejected)</span>
-              }
-            </span>
-          }
-          subtitle={`via ${poolChannelCount} channel(s)`}
+          title="Share Acceptance"
+          value={(() => {
+            const { submitted, rejected } = shareStats;
+            if (submitted === 0) return <span className="text-muted-foreground">—</span>;
+
+            const rate = ((submitted - rejected) / submitted) * 100;
+
+            // ── Label ──────────────────────────────────────────────────────
+            // Zero rejections → exact "100%".
+            // Any rejections  → 2 decimal places so even 0.01% rejection is
+            //   visible. Cap at "99.99%" so floating-point can never round up
+            //   to "100.00%" and falsely imply a clean run.
+            const label = rejected === 0
+              ? '100%'
+              : `${Math.min(rate, 99.99).toFixed(2)}%`;
+
+            // ── Colour ─────────────────────────────────────────────────────
+            // Green ONLY when literally zero rejections — "99.80%" must never
+            //   look the same as a perfect run.
+            // Neutral (default foreground) for high rates with minor rejects.
+            // Yellow 95–99 %, red below 95 %.
+            const colorClass = rejected === 0
+              ? 'text-green-500'
+              : rate >= 99
+                ? ''                  // neutral — noticeable but not alarming
+                : rate >= 95
+                  ? 'text-yellow-500'
+                  : 'text-red-500';
+
+            return <span className={colorClass}>{label}</span>;
+          })()}
+          subtitle={(() => {
+            const { submitted, rejected } = shareStats;
+            if (submitted === 0) return `via ${poolChannelCount} channel(s)`;
+            const rejectionRate = (rejected / submitted) * 100;
+            // Show exact "0%" when clean; cap display at 0.01% so it never
+            // rounds down to "0.00%" when there ARE rejections.
+            const rejRateLabel = rejected === 0
+              ? '0%'
+              : `${Math.max(rejectionRate, 0.01).toFixed(2)}%`;
+            return `${submitted.toLocaleString()} submitted · ${rejected.toLocaleString()} rejected (${rejRateLabel})`;
+          })()}
         />
 
         <StatCard
@@ -272,26 +303,21 @@ export function UnifiedDashboard() {
         </div>
       )}
 
-      {/* Actions Bar - Sticky Header */}
+      {/* Actions Bar */}
       {!poolLoading && (
-        <div className="sticky top-0 z-30 bg-background/60 backdrop-blur-xl py-3 -mx-6 px-6 md:-mx-8 md:px-8 border-y border-border/40 transition-all duration-200 shadow-sm supports-[backdrop-filter]:bg-background/60 mt-8 mb-0">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 max-w-7xl mx-auto">
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <div className="relative w-full sm:w-72">
-                <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                <input
-                  type="text"
-                  placeholder="Search workers..."
-                  className="w-full pl-9 h-9 bg-muted/30 border border-border/50 focus:bg-background transition-all rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/20"
-                  value={searchTerm}
-                  onChange={(e) => {
-                    setSearchTerm(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                />
-              </div>
-            </div>
-
+        <div className="flex items-center gap-2">
+          <div className="relative w-full sm:w-72">
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Search workers..."
+              className="w-full pl-9 h-9 bg-muted/30 border border-border/50 focus:bg-background transition-all rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/20"
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
+            />
           </div>
         </div>
       )}

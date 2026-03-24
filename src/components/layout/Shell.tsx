@@ -155,20 +155,20 @@ export function Shell({ children, appMode = 'translator', connectionStatus, pool
           </nav>
 
           {/* Right side */}
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-2 min-w-0">
             {connectionStatus && (
               <>
                 {/* Mobile: dot + uptime only (no status text to save space) */}
-                <span className="flex sm:hidden items-center gap-2 text-xs text-muted-foreground">
+                <span className="flex sm:hidden items-center gap-2 text-xs text-muted-foreground min-w-0">
                   <span className={cn('h-2 w-2 rounded-full shrink-0', {
                     'bg-green-500': connectionStatus === 'connected',
                     'bg-red-500': connectionStatus === 'disconnected',
                     'bg-yellow-500 animate-pulse': connectionStatus === 'connecting',
                   })} />
-                  Uptime: {formatUptime(uptime ?? 0)}
+                  <span className="truncate">Uptime: {formatUptime(uptime ?? 0)}</span>
                 </span>
                 {/* Desktop: dot + full status text + uptime */}
-                <span className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground">
+                <span className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground shrink-0">
                   <span className={cn('h-2 w-2 rounded-full shrink-0', {
                     'bg-green-500': connectionStatus === 'connected',
                     'bg-red-500': connectionStatus === 'disconnected',
@@ -180,14 +180,14 @@ export function Shell({ children, appMode = 'translator', connectionStatus, pool
                     ? 'Connecting...'
                     : 'Disconnected'}
                 </span>
-                <span className="hidden sm:block text-xs text-muted-foreground border-l border-border pl-2">
+                <span className="hidden sm:block text-xs text-muted-foreground border-l border-border pl-2 shrink-0">
                   Uptime: {formatUptime(uptime ?? 0)}
                 </span>
               </>
             )}
 
             {/* Theme toggle — desktop only (mobile: in hamburger) */}
-            <span className="hidden sm:block"><ThemeBtn /></span>
+            <span className="hidden sm:block shrink-0"><ThemeBtn /></span>
 
             {/* Hamburger — mobile only */}
             <button
