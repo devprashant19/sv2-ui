@@ -1,5 +1,10 @@
 import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import * as bitcoin from 'bitcoinjs-lib';
+import * as ecc from 'tiny-secp256k1';
+
+// Required for taproot (P2TR) address validation
+bitcoin.initEccLib(ecc);
 
 /**
  * Combines class names with Tailwind merge support.
@@ -78,4 +83,29 @@ export function formatNumber(num: number, decimals: number = 0): string {
 export function calculateSharesPerMinute(shares: number, uptimeSecs: number): number {
   if (uptimeSecs === 0) return 0;
   return (shares / uptimeSecs) * 60;
+}
+
+/**
+ * Validates a Bitcoin address against the specified network.
+ * Supports P2PKH, P2SH, P2WPKH, P2WSH, and P2TR address formats.
+ */
+export function isValidBitcoinAddress(addr: string, network: 'mainnet' | 'testnet4'): boolean {
+  if (!addr) return false;
+  const btcNetwork = network === 'mainnet' ? bitcoin.networks.bitcoin : bitcoin.networks.testnet;
+  try {
+    bitcoin.address.toOutputScript(addr, btcNetwork);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Returns an error message if the address is invalid for the given network,
+ * distinguishing between a wrong network address and a completely invalid one.
+ */
+export function getBitcoinAddressError(addr: string, network: 'mainnet' | 'testnet4'): string | null {
+  if (!addr || isValidBitcoinAddress(addr, network)) return null;
+  const otherNetwork = network === 'mainnet' ? 'testnet4' : 'mainnet';
+  return isValidBitcoinAddress(addr, otherNetwork) ? 'Wrong network' : 'Invalid Bitcoin address';
 }

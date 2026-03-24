@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { StepProps } from '../types';
 import { Info } from 'lucide-react';
+import { isValidBitcoinAddress, getBitcoinAddressError } from '@/lib/utils';
 
 export function MiningIdentityStep({ data, updateData, onNext }: StepProps) {
   const isSoloMode = data.miningMode === 'solo';
@@ -22,7 +23,12 @@ export function MiningIdentityStep({ data, updateData, onNext }: StepProps) {
     });
   }, [userIdentity, coinbaseAddress, isJdMode, data.jdc?.jdc_signature, data.translator, updateData]);
 
-  const isValid = userIdentity.length > 0 && (!isJdMode || coinbaseAddress.length > 0);
+  const network = data.bitcoin?.network ?? 'mainnet';
+
+  const isValid =
+    userIdentity.length > 0 &&
+    (!isSoloMode || isValidBitcoinAddress(userIdentity, network)) &&
+    (!isJdMode || isValidBitcoinAddress(coinbaseAddress, network));
 
   return (
     <div className="space-y-8">
@@ -48,6 +54,9 @@ export function MiningIdentityStep({ data, updateData, onNext }: StepProps) {
           autoComplete="off"
           className="w-full h-10 px-3 rounded-lg border border-input bg-background focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/15 outline-none transition-all font-mono text-sm"
         />
+        {isSoloMode && getBitcoinAddressError(userIdentity, network) && (
+          <p className="text-xs text-destructive mt-1">{getBitcoinAddressError(userIdentity, network)}</p>
+        )}
         <p className="text-xs text-muted-foreground mt-2">
           {isSoloMode
             ? 'Your Bitcoin address where you want to receive mining rewards'
@@ -79,6 +88,9 @@ export function MiningIdentityStep({ data, updateData, onNext }: StepProps) {
             autoComplete="off"
             className="w-full h-10 px-3 rounded-lg border border-input bg-background focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/15 outline-none transition-all font-mono text-sm"
           />
+          {getBitcoinAddressError(coinbaseAddress, network) && (
+            <p className="text-xs text-destructive mt-1">{getBitcoinAddressError(coinbaseAddress, network)}</p>
+          )}
           <p className="text-xs text-muted-foreground mt-2">
             Bitcoin address for receiving rewards during solo mining fallback
           </p>

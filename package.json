@@ -21,6 +21,7 @@
   "dependencies": {
     "@radix-ui/react-switch": "^1.2.6",
     "@tanstack/react-query": "^5.62.0",
+    "bitcoinjs-lib": "^7.0.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.468.0",
@@ -28,6 +29,7 @@
     "react-dom": "^18.3.1",
     "recharts": "^2.14.1",
     "tailwind-merge": "^2.6.0",
+    "tiny-secp256k1": "^2.2.4",
     "wouter": "^3.3.5"
   },
   "devDependencies": {
@@ -45,7 +47,9 @@
     "tailwindcss": "^3.4.17",
     "typescript": "^5.7.2",
     "typescript-eslint": "^8.56.1",
-    "vite": "^6.0.3"
+    "vite": "^6.0.3",
+    "vite-plugin-top-level-await": "^1.6.0",
+    "vite-plugin-wasm": "^3.6.0"
   },
   "repository": {
     "type": "git",
