@@ -48,12 +48,13 @@ export function Sv1ClientTable({ clients, isLoading }: Sv1ClientTableProps) {
               <span className="flex items-center gap-1.5">
                 Estimated Hashrate
                 <InfoPopover>
-                  Your proxy cannot directly measure how fast your miner is hashing. It estimates
-                  hashrate indirectly: it knows the difficulty of the work it assigned you, and it
-                  counts the valid shares you submit. From those two values it calculates how much
-                  hashing you must be doing. This is your estimated hashrate. Sampled every 5
-                  seconds. May take up to 60 seconds to reflect your miner's actual output after
-                  connecting.
+                  Please note that this is a statistical estimation, as there's no way for a proxy to
+                  know the real hashrate of each worker. The proxy expects share submission to
+                  happen at some specific rate, based on the minimal worker hashrate provided 
+                  at startup. As time goes on, it estimates the hashrate (and adjusts difficulty
+                  targets) according to the share submission rate of each worker. If some specific
+                  worker hashrate diverges too much from the minimal worker hashrate, it might
+                  take a while for this estimation to converge to the real hashrate.
                 </InfoPopover>
               </span>
             </TableHead>
