@@ -6,6 +6,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { InfoPopover } from '@/components/ui/info-popover';
 import { formatHashrate, formatDifficulty, truncateHex, formatNumber } from '@/lib/utils';
 import type { ServerExtendedChannelInfo, ServerStandardChannelInfo } from '@/types/api';
 
@@ -61,7 +62,16 @@ export function UpstreamChannelTable({
             <TableHead className="text-right">Shares</TableHead>
             <TableHead className="text-right hidden md:table-cell">Best Diff</TableHead>
             <TableHead className="hidden lg:table-cell">Target</TableHead>
-            <TableHead className="hidden xl:table-cell">Version Rolling</TableHead>
+            <TableHead className="hidden xl:table-cell">
+              <span className="flex items-center gap-1">
+                Version Rolling
+                <InfoPopover>
+                  Version rolling lets the miner change certain allowed bits in the block version while
+                  looking for valid shares. This gives the miner a bit more room to search. The mask
+                  shows which bits can be changed.
+                </InfoPopover>
+              </span>
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>

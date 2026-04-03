@@ -85,7 +85,16 @@ export function Sv1ClientTable({ clients, isLoading, sortKey, sortDir, onSort }:
               </TableHead>
               <TableHead className="hidden md:table-cell">Channel</TableHead>
               <TableHead className="hidden lg:table-cell">Extranonce1</TableHead>
-              <TableHead className="hidden xl:table-cell">Version Rolling</TableHead>
+              <TableHead className="hidden xl:table-cell">
+                <span className="flex items-center gap-1">
+                  Version Rolling
+                  <InfoPopover>
+                    Version rolling lets the miner change certain allowed bits in the block version while
+                    looking for valid shares. This gives the miner a bit more room to search. The mask
+                    shows which bits can be changed.
+                  </InfoPopover>
+                </span>
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
