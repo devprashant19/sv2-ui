@@ -219,8 +219,11 @@ export function UnifiedDashboard() {
   // standalone mode (no orchestration backend).
   const historyConfigKey = [templateMode, configPoolName].filter(Boolean).join(':') || 'default';
 
-  // Build hashrate history from real-time data
-  const hashrateHistory = useHashrateHistory(totalHashrate, historyConfigKey);
+  // Build hashrate history from real-time data.
+  // Pass undefined until pool data has actually loaded to prevent injecting
+  // a false zero into persisted history on page refresh (see issue #57).
+  const hashrateForHistory = poolGlobal ? totalHashrate : undefined;
+  const hashrateHistory = useHashrateHistory(hashrateForHistory, historyConfigKey);
 
   // Shares data from upstream SERVER channels (shares sent TO the Pool)
   const shareStats = useMemo(() => {
