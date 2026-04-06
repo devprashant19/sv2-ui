@@ -365,6 +365,8 @@ export function UnifiedDashboard() {
     ? `from ${clientChannelCount} client channel(s)`
     : undefined;
 
+  const hasBestDiffSource = isJdMode ? !!clientChannels : !!serverChannels;
+
   type DashboardWorkerRow = DownstreamWorkerRow & { search_text: string };
 
   const dashboardWorkers = useMemo<DashboardWorkerRow[]>(() => {
@@ -547,10 +549,10 @@ export function UnifiedDashboard() {
 
         <StatCard
           title="Best Difficulty"
-          value={bestDiff > 0 ? formatDifficulty(bestDiff) : '-'}
+          value={hasBestDiffSource ? formatDifficulty(bestDiff) : '-'}
           subtitle={bestDiffSubtitle}
         />
-      </div>
+        </div>
 
       {/* Miner Connection Info */}
       <div>
