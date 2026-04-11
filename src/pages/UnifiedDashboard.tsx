@@ -26,6 +26,7 @@ import {
 import { isAggregatedTproxyPoolName } from '@/components/setup/poolRules';
 import { useSetupStatus } from '@/hooks/useSetupStatus';
 import { useConnectionStatus } from '@/hooks/useConnectionStatus';
+import { useLogDiagnostics } from '@/hooks/useLogDiagnostics';
 import { formatHashrate, formatDifficulty } from '@/lib/utils';
 import type { Sv1ClientInfo } from '@/types/api';
 
@@ -109,6 +110,10 @@ export function UnifiedDashboard() {
   const jdcDown           = isJdMode && !jdcHealthLoading && !jdcHealthy;
   const showError         = poolError || translatorDown || jdcDown;
   const configuredButStopped = isOrchestrated && isConfigured && !isRunning;
+
+  // log-derived diagnostics from the API
+  const { data: logDiagnostics } = useLogDiagnostics();
+  const diagnostics = logDiagnostics?.diagnostics ?? [];
   const [isStarting, setIsStarting] = useState(false);
 
   const handleStartMining = async () => {
@@ -485,6 +490,27 @@ export function UnifiedDashboard() {
           </span>
         </div>
       )}
+
+      {/* log-derived Diagnostic Banners */}
+      {diagnostics.map((diagnostic) => (
+        <div
+          key={diagnostic.code}
+          className={`flex items-start gap-3 rounded-xl border px-5 py-4 text-sm ${
+            diagnostic.severity === 'error'
+              ? 'border-red-500/40 bg-red-500/10 text-red-500'
+              : 'border-amber-500/40 bg-amber-500/10 text-amber-500'
+          }`}
+        >
+          <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+          <div className="flex flex-col gap-1">
+            <span className="font-medium">{diagnostic.title}</span>
+            <span>{diagnostic.message}</span>
+            {diagnostic.recommendation && (
+              <span className="text-current/80">{diagnostic.recommendation}</span>
+            )}
+          </div>
+        </div>
+      ))}
 
       {/* Hero Stats Section */}
       <div className={isSovereignSolo ? 'grid gap-4 md:grid-cols-2 lg:grid-cols-4' : 'grid gap-4 md:grid-cols-2 lg:grid-cols-5'}>
