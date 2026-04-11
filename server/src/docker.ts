@@ -233,13 +233,21 @@ export async function readContainerLogs(
   try {
     const dockerContainer = docker.getContainer(LOG_CONTAINER_NAMES[container]);
     const info = await dockerContainer.inspect();
-    const logBuffer = await dockerContainer.logs({
+    const startTime = info.State?.StartedAt;
+
+    const logOptions: Docker.LogsOptions = {
       stdout: true,
       stderr: true,
       timestamps: true,
-      tail: options.tail,
+      tail: options.tail ?? 200,
       abortSignal: AbortSignal.timeout(2000),
-    });
+    };
+
+    if (startTime) {
+      logOptions.since = Math.floor(new Date(startTime).getTime() / 1000);
+    }
+
+    const logBuffer = await dockerContainer.logs(logOptions);
 
     const chunks = info.Config?.Tty
       ? [{ stream: 'stdout' as const, payload: logBuffer.toString('utf-8') }]
