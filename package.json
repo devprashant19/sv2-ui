@@ -16,6 +16,7 @@
     "build:all": "npm run build && npm run build:server",
     "preview": "vite preview",
     "lint": "eslint . --max-warnings 0",
+    "test:server": "npm run test --prefix server",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
