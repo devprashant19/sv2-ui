@@ -21,6 +21,32 @@ export type LogProvider = (
   options?: { tail?: number }
 ) => Promise<ContainerLogLine[]>;
 
+function isMissingContainerError(error: unknown): boolean {
+  let current = error;
+
+  for (let depth = 0; depth < 8 && current && typeof current === 'object'; depth += 1) {
+    const candidate = current as {
+      cause?: unknown;
+      message?: string;
+      reason?: string;
+      statusCode?: number;
+      json?: { message?: string };
+    };
+
+    if (
+      (candidate.statusCode === 404 && candidate.reason === 'no such container') ||
+      candidate.message?.includes('No such container') ||
+      candidate.json?.message?.includes('No such container')
+    ) {
+      return true;
+    }
+
+    current = candidate.cause;
+  }
+
+  return false;
+}
+
 function getStreamContainers(mode: SetupMode | null): LogContainerRole[] {
   if (mode === 'jd') {
     return ['translator', 'jdc'];
@@ -75,7 +101,19 @@ async function readCollatedLogLines(
   }
 
   const logSets = await Promise.all(
-    containers.map((container) => readLogs(container, { tail: RECENT_LOG_TAIL }))
+    containers.map(async (container) => {
+      try {
+        return await readLogs(container, { tail: RECENT_LOG_TAIL });
+      } catch (error) {
+        // Diagnostics polling is best-effort. Missing containers are expected
+        // while the stack is stopped or between remove/create during restart.
+        if (isMissingContainerError(error)) {
+          return [];
+        }
+
+        throw error;
+      }
+    })
   );
 
   return logSets.flat().sort(sortLines);

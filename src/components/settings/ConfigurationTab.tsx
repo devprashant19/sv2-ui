@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { InlineEditField } from '@/components/ui/inline-edit-field';
 import { useSetupStatus } from '@/hooks/useSetupStatus';
 import { useControlApi, getCurrentConfig } from '@/hooks/useControlApi';
 import type { SetupData } from '@/components/setup/types';
@@ -48,7 +49,7 @@ export function ConfigurationTab() {
   const [config, setConfig] = useState<SetupData | null>(null);
   const [loading, setLoading] = useState(true);
   const { isOrchestrated, isConfigured, isRunning, miningMode, mode } = useSetupStatus();
-  const { stop, restart, isStoppingOrRestarting, stopError, restartError } = useControlApi();
+  const { stop, restart, isStoppingOrRestarting, stopError, restartError, updateConfig, isUpdatingConfig, updateConfigError } = useControlApi();
 
   const clearDashboardClientState = () => {
     clearPersistedDashboardState();
@@ -227,13 +228,13 @@ export function ConfigurationTab() {
       </Card>
 
       {/* Error Messages */}
-      {(stopError || restartError) && (
+      {(stopError || restartError || updateConfigError) && (
         <Card className="border-red-500/30 bg-red-500/5">
           <CardContent className="pt-6">
             <div className="flex gap-3">
               <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0" />
               <p className="text-sm text-red-500">
-                {stopError?.message || restartError?.message || 'Operation failed'}
+                {stopError?.message || restartError?.message || updateConfigError?.message || 'Operation failed'}
               </p>
             </div>
           </CardContent>
@@ -348,10 +349,27 @@ export function ConfigurationTab() {
 
             return (
               <div className="p-4 rounded-lg border border-border/50 bg-muted/20">
-                <p className="font-medium mb-1">
-                  {isSovereignSolo ? 'Miner Identity' : isSoloMode ? 'Bitcoin Address' : 'Pool Username'}
-                </p>
-                <p className="font-mono text-sm truncate">{identity}</p>
+                <InlineEditField
+                  label={isSovereignSolo ? 'Miner Identity' : isSoloMode ? 'Bitcoin Address' : 'Pool Username'}
+                  value={identity}
+                  onSave={(newValue) => {
+                    if (!config?.translator) return;
+                    updateConfig({
+                      translator: {
+                        enable_vardiff: config.translator.enable_vardiff,
+                        aggregate_channels: config.translator.aggregate_channels,
+                        min_hashrate: config.translator.min_hashrate,
+                        user_identity: newValue,
+                      },
+                    }, {
+                      onSuccess: () => {
+                        getCurrentConfig().then(setConfig);
+                      },
+                    });
+                  }}
+                  isLoading={isUpdatingConfig}
+                  error={updateConfigError}
+                />
               </div>
             );
           })()}

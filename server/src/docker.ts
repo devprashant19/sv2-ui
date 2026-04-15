@@ -233,13 +233,22 @@ export async function readContainerLogs(
   try {
     const dockerContainer = docker.getContainer(LOG_CONTAINER_NAMES[container]);
     const info = await dockerContainer.inspect();
-    const logBuffer = await dockerContainer.logs({
+    const startTime = info.State?.StartedAt;
+
+    const logOptions: Docker.ContainerLogsOptions & { follow: false } = {
       stdout: true,
       stderr: true,
+      follow: false,
       timestamps: true,
-      tail: options.tail,
+      tail: options.tail ?? 200,
       abortSignal: AbortSignal.timeout(2000),
-    });
+    };
+
+    if (startTime) {
+      logOptions.since = Math.floor(new Date(startTime).getTime() / 1000);
+    }
+
+    const logBuffer = await dockerContainer.logs(logOptions);
 
     const chunks = info.Config?.Tty
       ? [{ stream: 'stdout' as const, payload: logBuffer.toString('utf-8') }]
@@ -277,23 +286,23 @@ async function connectSv2UiToNetwork(): Promise<void> {
   try {
     // Find sv2-ui container (could be named sv2-ui or sv2-ui-test)
     const containers = await docker.listContainers({ all: true });
-    const sv2UiContainer = containers.find(c => 
+    const sv2UiContainer = containers.find(c =>
       c.Names.some(n => n === '/sv2-ui' || n === '/sv2-ui-test')
     );
-    
+
     if (!sv2UiContainer) {
       // Not running in Docker (development mode)
       return;
     }
-    
+
     const network = docker.getNetwork(NETWORK_NAME);
     const networkInfo = await network.inspect();
-    
+
     // Check if already connected
     if (networkInfo.Containers && networkInfo.Containers[sv2UiContainer.Id]) {
       return;
     }
-    
+
     console.log('Connecting sv2-ui to sv2-network...');
     await network.connect({ Container: sv2UiContainer.Id });
   } catch {
@@ -345,7 +354,7 @@ async function getContainerStatus(name: string): Promise<ContainerStatus | null>
   try {
     const container = docker.getContainer(name);
     const info = await container.inspect();
-    
+
     let status: HealthStatus = 'stopped';
     if (info.State.Running) {
       status = info.State.Health?.Status === 'healthy' ? 'healthy' : 'starting';
@@ -396,7 +405,7 @@ async function startTranslator(configPath: string): Promise<void> {
         '9092/tcp': [{ HostPort: '9092' }],
       },
       NetworkMode: NETWORK_NAME,
-      RestartPolicy: { Name: 'always' },
+      RestartPolicy: { Name: 'no' },
     },
     ExposedPorts: {
       '34255/tcp': {},
@@ -421,13 +430,13 @@ async function startJdc(
 
   const binds = isRunningInDocker
     ? [
-        `${CONFIG_VOLUME}:/config:ro`,
-        `${bitcoinSocketPath}:/root/.bitcoin/node.sock:ro`,
-      ]
+      `${CONFIG_VOLUME}:/config:ro`,
+      `${bitcoinSocketPath}:/root/.bitcoin/node.sock:ro`,
+    ]
     : [
-        `${configPath}:/config/jdc.toml:ro`,
-        `${bitcoinSocketPath}:/root/.bitcoin/node.sock:ro`,
-      ];
+      `${configPath}:/config/jdc.toml:ro`,
+      `${bitcoinSocketPath}:/root/.bitcoin/node.sock:ro`,
+    ];
 
   const container = await docker.createContainer({
     Image: JDC_IMAGE,
