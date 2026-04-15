@@ -230,13 +230,13 @@ export function ReviewStart({ data, onComplete }: ReviewStartProps) {
 
         {data.translator?.min_hashrate && (
           <div className="p-5 border-x border-b border-border bg-card">
-            <SectionLabel n={nextSection()} label="Expected Hashrate" />
+            <SectionLabel n={nextSection()} label="Lowest Worker Hashrate" />
             <div className="text-sm text-muted-foreground space-y-1 pl-7">
               <div className="font-semibold text-primary">
                 {formatHashrate(data.translator.min_hashrate)}
               </div>
               <div className="text-xs">
-                Initial mining difficulty will be based on this value.
+                Used as the starting difficulty per worker. SV2 auto-tunes from here via vardiff.
               </div>
             </div>
           </div>

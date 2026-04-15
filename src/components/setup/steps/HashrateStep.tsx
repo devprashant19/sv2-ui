@@ -10,10 +10,10 @@ interface HashratePreset {
 }
 
 const HASHRATE_PRESETS: HashratePreset[] = [
-  { id: 'bitaxe',      label: 'Bitaxe / USB Miner', hashrate: 500_000_000_000,       description: '~500 GH/s' },
-  { id: 'single-asic', label: 'Single ASIC',         hashrate: 100_000_000_000_000,   description: '~100 TH/s' },
-  { id: 'small-farm',  label: 'Small Farm',           hashrate: 1_000_000_000_000_000, description: '~1 PH/s'   },
-  { id: 'custom',      label: 'Custom',               hashrate: 0,                     description: 'Enter your own value' },
+  { id: 'bitaxe',      label: 'Bitaxe / USB Miner', hashrate: 500_000_000_000,     description: '~500 GH/s' },
+  { id: 'mid-asic',    label: 'Mid-Range ASIC',       hashrate: 100_000_000_000_000, description: '~100 TH/s' },
+  { id: 'high-asic',   label: 'High-End ASIC',        hashrate: 300_000_000_000_000, description: '~300 TH/s' },
+  { id: 'custom',      label: 'Custom',               hashrate: 0,                   description: 'Enter your own value' },
 ];
 
 function formatHashrateDisplay(hashrate: number): string {
@@ -28,7 +28,7 @@ export function HashrateStep({ data, updateData, onNext }: StepProps) {
   const existingHashrate = data.translator?.min_hashrate || 0;
 
   const getInitialPreset = () => {
-    if (!existingHashrate) return 'single-asic';
+    if (!existingHashrate) return 'mid-asic';
     return HASHRATE_PRESETS.find(p => p.hashrate === existingHashrate)?.id || 'custom';
   };
 
@@ -116,15 +116,18 @@ export function HashrateStep({ data, updateData, onNext }: StepProps) {
   return (
     <div className="space-y-8">
       <div className="text-center">
-        <h2 className="text-2xl md:text-3xl font-semibold tracking-tight mb-3">Expected Hashrate</h2>
+        <h2 className="text-2xl md:text-3xl font-semibold tracking-tight mb-3">Lowest Worker Hashrate</h2>
         <p className="text-lg text-muted-foreground">
-          What's the total hashrate you'll point to this SV2 client?
+          One worker? Enter its hashrate. Multiple? Use the lowest performing.
         </p>
       </div>
 
       <div className="p-4 rounded-xl bg-muted/40" role="note">
         <p className="text-sm text-muted-foreground">
-          This sets the initial mining difficulty. The SV2 client will automatically adjust via vardiff.
+          Difficulty per worker is automatically adjusted via variable difficulty (vardiff) algorithm.
+          Give it a starting point. Using the approximate hashrate of your{' '}
+          <span className="text-foreground font-medium">lowest performing worker</span> ensures every
+          device can find shares right away.
         </p>
       </div>
 
@@ -195,7 +198,7 @@ export function HashrateStep({ data, updateData, onNext }: StepProps) {
         const display = formatHashrateDisplay(hashrate);
         return (
           <div className="p-4 rounded-xl bg-primary/[0.08] text-center">
-            <div className="text-sm text-muted-foreground mb-1">Starting difficulty for</div>
+            <div className="text-sm text-muted-foreground mb-1">Starting difficulty per miner</div>
             <div className="text-2xl font-semibold text-primary">{display}</div>
           </div>
         );
