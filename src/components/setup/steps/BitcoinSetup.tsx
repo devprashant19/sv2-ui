@@ -7,6 +7,9 @@ function getDefaultDataDir(os: OperatingSystem): string {
   return os === 'linux' ? '~/.bitcoin' : '~/Library/Application Support/Bitcoin';
 }
 
+// Bitcoin Core places its IPC socket under the data directory: mainnet at the
+// datadir root, other networks under a <network>/ subdirectory. Validation is
+// network-agnostic — only the default path differs.
 function computeSocketPath(os: OperatingSystem, network: 'mainnet' | 'testnet4', customDataDir: string): string {
   const dataDir = customDataDir.trim() || getDefaultDataDir(os);
   return network === 'mainnet' ? `${dataDir}/node.sock` : `${dataDir}/testnet4/node.sock`;
@@ -156,21 +159,33 @@ export function BitcoinSetup({ data, updateData, onNext }: StepProps) {
         <p id="socket-path-hint" className="text-xs text-muted-foreground mt-2">Click to edit if your socket is in a different location.</p>
 
         {isChecking && (
-          <div className="flex items-center gap-2 mt-3 px-3 py-2 rounded-md bg-muted/50 text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin flex-shrink-0" />
-            <span className="text-xs">Checking socket path...</span>
+          <div
+            className="mt-3 p-3 rounded-lg bg-muted/50 text-sm text-muted-foreground flex gap-3 items-center"
+            role="status"
+            aria-live="polite"
+          >
+            <Loader2 className="h-4 w-4 animate-spin flex-shrink-0" aria-hidden="true" />
+            <span>Checking socket path...</span>
           </div>
         )}
         {!isChecking && isValid && (
-          <div className="flex items-center gap-2 mt-3 px-3 py-2 rounded-md bg-success/20 text-success">
-            <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
-            <span className="text-xs font-medium">Socket is listening</span>
+          <div
+            className="mt-3 p-3 rounded-lg bg-success/10 border border-success/20 text-sm text-success flex gap-3 items-center"
+            role="status"
+            aria-live="polite"
+          >
+            <CheckCircle2 className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
+            <span>Socket is listening</span>
           </div>
         )}
         {!isChecking && socketError && (
-          <div className="flex items-start gap-2 mt-3 px-3 py-2 rounded-md bg-destructive/20 text-destructive">
-            <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
-            <span className="text-xs font-medium">{socketError}</span>
+          <div
+            className="mt-3 p-3 rounded-lg bg-destructive/[0.08] text-sm text-destructive flex gap-3 items-start"
+            role="alert"
+            aria-live="assertive"
+          >
+            <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" aria-hidden="true" />
+            <span>{socketError}</span>
           </div>
         )}
       </div>
