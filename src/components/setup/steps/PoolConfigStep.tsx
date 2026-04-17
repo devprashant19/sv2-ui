@@ -2,65 +2,7 @@ import { useState } from 'react';
 import { StepProps, PoolConfig } from '../types';
 import { Check } from 'lucide-react';
 import { PoolIcon } from '@/components/ui/pool-icon';
-
-interface KnownPool {
-  id: string;
-  name: string;
-  address: string;
-  port: number;
-  authority_public_key: string;
-  description: string;
-  badge?: 'testing' | 'coming-soon';
-  logoUrl?: string;
-  logoOnDark?: boolean; // true = white logo, needs dark container in light mode
-}
-
-const POOL_MINING_NO_JD: KnownPool[] = [
-  {
-    id: 'braiins',
-    name: 'Braiins Pool',
-    address: 'stratum.braiins.com',
-    port: 3333,
-    authority_public_key: '9awtMD5KQgvRUh2yFbjVeT7b6hjipWcAsQHd6wEhgtDT9soosna',
-    description: 'Production SV2 pool by Braiins',
-    logoUrl: '/braiins.svg',
-    logoOnDark: true,
-  },
-];
-
-const POOL_MINING_JD: KnownPool[] = [
-  {
-    id: 'sri-solo',
-    name: 'SRI Pool',
-    address: '75.119.150.111',
-    port: 3333,
-    authority_public_key: '9auqWEzQDVyd2oe1JVGFLMLHZtCo2FFqZwtKA5gd9xbuEu7PH72',
-    description: 'Community testing pool. Payouts go to SRI development.',
-    badge: 'testing',
-    logoUrl: '/sri-logo.png',
-  },
-];
-
-const SOLO_POOLS: KnownPool[] = [
-  {
-    id: 'sri-solo',
-    name: 'SRI Community Solo Pool',
-    address: '75.119.150.111',
-    port: 3333,
-    authority_public_key: '9auqWEzQDVyd2oe1JVGFLMLHZtCo2FFqZwtKA5gd9xbuEu7PH72',
-    description: 'Community-run solo mining pool',
-    logoUrl: '/sri-logo.png',
-  },
-  {
-    id: 'blitzpool',
-    name: 'Blitzpool',
-    address: 'blitzpool.yourdevice.ch',
-    port: 3333,
-    authority_public_key: '9bCoFxTszKCuffyywH5uS5o6WcU4vsjTH2axxc7wE86y2HhvULU',
-    description: 'Solo mining pool by Blitzpool',
-    logoUrl: '/blitzpool.svg',
-  },
-];
+import { POOL_MINING_NO_JD, POOL_MINING_JD, SOLO_POOLS, type KnownPool } from '@/lib/pools';
 
 export function PoolConfigStep({ data, updateData, onNext }: StepProps) {
   const isSoloMode = data.miningMode === 'solo';

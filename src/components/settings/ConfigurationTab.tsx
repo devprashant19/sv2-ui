@@ -4,9 +4,10 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { InlineEditField } from '@/components/ui/inline-edit-field';
+import { PoolIcon } from '@/components/ui/pool-icon';
 import { useSetupStatus } from '@/hooks/useSetupStatus';
 import { useControlApi, getCurrentConfig } from '@/hooks/useControlApi';
+import { getPoolsForMode, type KnownPool } from '@/lib/pools';
 import type { SetupData } from '@/components/setup/types';
 import {
   Loader2,
@@ -14,6 +15,9 @@ import {
   RotateCw,
   StopCircle,
   Trash2,
+  Pencil,
+  Check,
+  X,
 } from 'lucide-react';
 
 function clearPersistedDashboardState() {
@@ -39,9 +43,11 @@ function clearPersistedDashboardState() {
   });
 }
 
+type EditingField = null | 'pool' | 'mode' | 'identity';
+
 /**
  * Configuration tab for Settings page.
- * Shows current setup and allows reconfiguration.
+ * Shows current setup and allows inline editing of pool and template mode.
  */
 export function ConfigurationTab() {
   const [, navigate] = useLocation();
@@ -49,7 +55,23 @@ export function ConfigurationTab() {
   const [config, setConfig] = useState<SetupData | null>(null);
   const [loading, setLoading] = useState(true);
   const { isOrchestrated, isConfigured, isRunning, miningMode, mode } = useSetupStatus();
-  const { stop, restart, isStoppingOrRestarting, stopError, restartError, updateConfig, isUpdatingConfig, updateConfigError } = useControlApi();
+  const {
+    stop,
+    restart,
+    setup,
+    isStoppingOrRestarting,
+    isSettingUp,
+    stopError,
+    restartError,
+    setupError,
+  } = useControlApi();
+
+  const [editing, setEditing] = useState<EditingField>(null);
+  const [editPool, setEditPool] = useState<{ name: string; address: string; port: number; authority_public_key: string } | null>(null);
+  const [isCustomPool, setIsCustomPool] = useState(false);
+  const [editMode, setEditMode] = useState<'jd' | 'no-jd' | null>(null);
+  const [editIdentity, setEditIdentity] = useState<string>('');
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
   const clearDashboardClientState = () => {
     clearPersistedDashboardState();
@@ -69,14 +91,20 @@ export function ConfigurationTab() {
 
   useEffect(() => {
     if (isOrchestrated && isConfigured) {
-      getCurrentConfig().then(config => {
-        setConfig(config);
+      getCurrentConfig().then(cfg => {
+        setConfig(cfg);
         setLoading(false);
       });
     } else {
       setLoading(false);
     }
   }, [isOrchestrated, isConfigured]);
+
+  useEffect(() => {
+    if (!saveSuccess) return;
+    const t = setTimeout(() => setSaveSuccess(false), 2000);
+    return () => clearTimeout(t);
+  }, [saveSuccess]);
 
   const handleReconfigure = () => {
     clearDashboardClientState();
@@ -107,6 +135,72 @@ export function ConfigurationTab() {
         console.error('Reset failed:', error);
       }
     }
+  };
+
+  const startEditPool = () => {
+    if (!config?.pool) return;
+    const availablePools = getPoolsForMode(miningMode, mode);
+    const matchesPreset = availablePools.some(p => p.address === config.pool?.address && p.port === config.pool?.port);
+    setIsCustomPool(!matchesPreset);
+    setEditPool({ ...config.pool });
+    setEditing('pool');
+  };
+
+  const startEditMode = () => {
+    setEditMode(mode ?? 'no-jd');
+    setEditing('mode');
+  };
+
+  const startEditIdentity = (currentValue: string) => {
+    setEditIdentity(currentValue);
+    setEditing('identity');
+  };
+
+  const cancelEdit = () => {
+    setEditing(null);
+    setEditPool(null);
+    setIsCustomPool(false);
+    setEditMode(null);
+    setEditIdentity('');
+  };
+
+  const isPoolValid = !!editPool?.address && !!editPool?.authority_public_key;
+  const isIdentityValid = editIdentity.trim().length > 0;
+
+  const saveEdit = () => {
+    if (!config) return;
+
+    const updated: SetupData = { ...config };
+
+    if (editing === 'pool' && editPool) {
+      if (!isPoolValid) return;
+      updated.pool = { ...editPool };
+    } else if (editing === 'mode') {
+      if (editMode === 'jd' && !config.bitcoin) {
+        navigate('/setup');
+        return;
+      }
+      updated.mode = editMode;
+      if (editMode === 'no-jd') {
+        updated.jdc = null;
+        updated.bitcoin = null;
+      }
+    } else if (editing === 'identity') {
+      if (!isIdentityValid || !config.translator) return;
+      const trimmed = editIdentity.trim();
+      updated.translator = { ...config.translator, user_identity: trimmed };
+      if (config.jdc) {
+        updated.jdc = { ...config.jdc, user_identity: trimmed };
+      }
+    }
+
+    setup(updated, {
+      onSuccess: () => {
+        setConfig(updated);
+        cancelEdit();
+        setSaveSuccess(true);
+      },
+    });
   };
 
   // Not using orchestration backend
@@ -168,6 +262,8 @@ export function ConfigurationTab() {
     : isJdMode
       ? 'Custom Templates (Job Declaration)'
       : 'Pool Templates';
+  const pools = getPoolsForMode(miningMode, mode);
+  const isSaving = isSettingUp;
 
   return (
     <div className="space-y-6 animate-in slide-in-from-left-2 duration-300">
@@ -228,14 +324,26 @@ export function ConfigurationTab() {
       </Card>
 
       {/* Error Messages */}
-      {(stopError || restartError || updateConfigError) && (
+      {(stopError || restartError || setupError) && (
         <Card className="border-red-500/30 bg-red-500/5">
           <CardContent className="pt-6">
             <div className="flex gap-3">
               <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0" />
               <p className="text-sm text-red-500">
-                {stopError?.message || restartError?.message || updateConfigError?.message || 'Operation failed'}
+                {stopError?.message || restartError?.message || setupError?.message || 'Operation failed'}
               </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Save Success */}
+      {saveSuccess && (
+        <Card className="border-green-500/30 bg-green-500/5">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <Check className="h-5 w-5 text-green-500" />
+              <p className="text-sm text-green-500">Settings saved. Services restarting with new configuration.</p>
             </div>
           </CardContent>
         </Card>
@@ -247,7 +355,7 @@ export function ConfigurationTab() {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>Current Configuration</CardTitle>
-              <CardDescription>Your active mining client setup</CardDescription>
+              <CardDescription>Your active mining client setup. Click the edit icon to change a setting.</CardDescription>
             </div>
             <div className="flex gap-2">
               <Button variant="outline" onClick={handleReconfigure}>
@@ -261,7 +369,7 @@ export function ConfigurationTab() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Mining Mode */}
+          {/* Mining Mode (read-only) */}
           <div className="flex items-center justify-between p-4 rounded-lg border border-border/50 bg-muted/20">
             <div>
               <p className="font-medium">Mining Mode</p>
@@ -275,19 +383,157 @@ export function ConfigurationTab() {
             </Badge>
           </div>
 
-          <div className="p-4 rounded-lg border border-border/50 bg-muted/20">
-            <p className="font-medium mb-1">Block Templates</p>
-            <p className="text-sm text-muted-foreground">{templateModeLabel}</p>
-          </div>
-
-          {/* Pool */}
-          {!isSovereignSolo && config.pool && (
+          {/* Template Mode — inline-editable only for Pool Mining */}
+          {!isSoloMode ? (
+            <ConfigRow
+              label="Block Templates"
+              editing={editing === 'mode'}
+              onEdit={startEditMode}
+              onSave={saveEdit}
+              onCancel={cancelEdit}
+              isSaving={isSaving}
+              disabled={editing !== null && editing !== 'mode'}
+              display={
+                <div className="flex items-center gap-2">
+                  <p className="text-sm text-muted-foreground">{templateModeLabel}</p>
+                  <Badge variant={isJdMode ? 'default' : 'secondary'}>
+                    {isJdMode ? 'JD' : 'No-JD'}
+                  </Badge>
+                </div>
+              }
+              editContent={
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    {(['no-jd', 'jd'] as const).map(m => (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => setEditMode(m)}
+                        className={`px-4 py-2 rounded-lg border text-sm font-medium transition-all ${
+                          editMode === m
+                            ? 'border-primary bg-primary/[0.04] text-primary'
+                            : 'border-border bg-card hover:border-primary/45'
+                        }`}
+                      >
+                        {m === 'jd' ? 'Job Declaration (Custom Templates)' : 'Pool Templates'}
+                      </button>
+                    ))}
+                  </div>
+                  {editMode === 'jd' && !config.bitcoin && (
+                    <p className="text-xs text-warning">
+                      JD mode requires Bitcoin Core configuration. Saving will redirect to the Setup Wizard.
+                    </p>
+                  )}
+                </div>
+              }
+            />
+          ) : (
             <div className="p-4 rounded-lg border border-border/50 bg-muted/20">
-              <p className="font-medium">{config.pool.name}</p>
-              <p className="text-muted-foreground font-mono text-xs">
-                {config.pool.address}:{config.pool.port}
-              </p>
+              <p className="font-medium mb-1">Block Templates</p>
+              <p className="text-sm text-muted-foreground">{templateModeLabel}</p>
             </div>
+          )}
+
+          {/* Pool — inline-editable when not Sovereign Solo */}
+          {!isSovereignSolo && config.pool && (
+            <ConfigRow
+              label="Pool"
+              editing={editing === 'pool'}
+              onEdit={startEditPool}
+              onSave={saveEdit}
+              onCancel={cancelEdit}
+              isSaving={isSaving}
+              saveDisabled={!isPoolValid}
+              disabled={editing !== null && editing !== 'pool'}
+              display={
+                <>
+                  <p className="font-medium text-sm">{config.pool.name}</p>
+                  <p className="text-muted-foreground font-mono text-xs">
+                    {config.pool.address}:{config.pool.port}
+                  </p>
+                </>
+              }
+              editContent={
+                <div className="space-y-2">
+                  {pools.filter(p => p.badge !== 'coming-soon').map(pool => (
+                    <PoolOption
+                      key={pool.id}
+                      pool={pool}
+                      selected={!isCustomPool && editPool?.address === pool.address && editPool?.port === pool.port}
+                      onSelect={() => {
+                        setIsCustomPool(false);
+                        setEditPool({
+                          name: pool.name,
+                          address: pool.address,
+                          port: pool.port,
+                          authority_public_key: pool.authority_public_key,
+                        });
+                      }}
+                    />
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsCustomPool(true);
+                      setEditPool({ name: 'Custom Pool', address: '', port: 34254, authority_public_key: '' });
+                    }}
+                    className={`w-full p-3 rounded-lg border transition-all text-left ${
+                      isCustomPool
+                        ? 'border-primary bg-primary/[0.04]'
+                        : 'border-border bg-card hover:border-primary/45'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className={`font-medium text-sm ${isCustomPool ? 'text-primary' : ''}`}>Custom Pool</div>
+                        <div className="text-xs text-muted-foreground">Enter your own pool connection details</div>
+                      </div>
+                      {isCustomPool && (
+                        <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
+                          <Check className="w-3 h-3 text-background" />
+                        </div>
+                      )}
+                    </div>
+                  </button>
+                  {isCustomPool && (
+                    <div className="space-y-3 p-4 rounded-lg border border-border bg-muted/30">
+                      <div>
+                        <label htmlFor="edit-pool-address" className="block text-xs font-medium mb-1">Pool Address</label>
+                        <input
+                          id="edit-pool-address"
+                          type="text"
+                          value={editPool?.address ?? ''}
+                          onChange={e => setEditPool(prev => prev ? { ...prev, address: e.target.value } : prev)}
+                          placeholder="pool.example.com"
+                          className="w-full h-9 px-3 rounded-lg border border-input bg-background text-sm focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/15 outline-none transition-all"
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="edit-pool-port" className="block text-xs font-medium mb-1">Port</label>
+                        <input
+                          id="edit-pool-port"
+                          type="number"
+                          value={editPool?.port ?? 34254}
+                          onChange={e => setEditPool(prev => prev ? { ...prev, port: parseInt(e.target.value) || 34254 } : prev)}
+                          className="w-full h-9 px-3 rounded-lg border border-input bg-background text-sm focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/15 outline-none transition-all"
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="edit-pool-pubkey" className="block text-xs font-medium mb-1">Authority Public Key</label>
+                        <input
+                          id="edit-pool-pubkey"
+                          type="text"
+                          value={editPool?.authority_public_key ?? ''}
+                          onChange={e => setEditPool(prev => prev ? { ...prev, authority_public_key: e.target.value } : prev)}
+                          placeholder="Enter pool's authority public key"
+                          className="w-full h-9 px-3 rounded-lg border border-input bg-background font-mono text-sm focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/15 outline-none transition-all"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              }
+            />
           )}
 
           {/* Username / Identity */}
@@ -347,30 +593,35 @@ export function ConfigurationTab() {
               );
             }
 
+            const identityLabel = isSovereignSolo ? 'Miner Identity' : isSoloMode ? 'Bitcoin Address' : 'Pool Username';
+
             return (
-              <div className="p-4 rounded-lg border border-border/50 bg-muted/20">
-                <InlineEditField
-                  label={isSovereignSolo ? 'Miner Identity' : isSoloMode ? 'Bitcoin Address' : 'Pool Username'}
-                  value={identity}
-                  onSave={(newValue) => {
-                    if (!config?.translator) return;
-                    updateConfig({
-                      translator: {
-                        enable_vardiff: config.translator.enable_vardiff,
-                        aggregate_channels: config.translator.aggregate_channels,
-                        min_hashrate: config.translator.min_hashrate,
-                        user_identity: newValue,
-                      },
-                    }, {
-                      onSuccess: () => {
-                        getCurrentConfig().then(setConfig);
-                      },
-                    });
-                  }}
-                  isLoading={isUpdatingConfig}
-                  error={updateConfigError}
-                />
-              </div>
+              <ConfigRow
+                label={identityLabel}
+                editing={editing === 'identity'}
+                onEdit={() => startEditIdentity(identity)}
+                onSave={saveEdit}
+                onCancel={cancelEdit}
+                isSaving={isSaving}
+                saveDisabled={!isIdentityValid}
+                disabled={editing !== null && editing !== 'identity'}
+                display={<p className="font-mono text-xs text-muted-foreground truncate">{identity}</p>}
+                editContent={
+                  <input
+                    type="text"
+                    value={editIdentity}
+                    onChange={(e) => setEditIdentity(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && isIdentityValid && !isSaving) saveEdit();
+                      if (e.key === 'Escape') cancelEdit();
+                    }}
+                    autoFocus
+                    autoComplete="off"
+                    placeholder={identityLabel}
+                    className="w-full h-10 px-3 rounded-lg border border-input bg-background font-mono text-sm focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/15 outline-none transition-all"
+                  />
+                }
+              />
             );
           })()}
 
@@ -399,5 +650,113 @@ export function ConfigurationTab() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+/**
+ * Reusable editable config row with display/edit toggle.
+ */
+function ConfigRow({
+  label,
+  editing,
+  onEdit,
+  onSave,
+  onCancel,
+  isSaving,
+  saveDisabled,
+  disabled,
+  display,
+  editContent,
+}: {
+  label: string;
+  editing: boolean;
+  onEdit: () => void;
+  onSave: () => void;
+  onCancel: () => void;
+  isSaving: boolean;
+  saveDisabled?: boolean;
+  disabled: boolean;
+  display: React.ReactNode;
+  editContent: React.ReactNode;
+}) {
+  if (editing) {
+    return (
+      <div className="p-4 rounded-lg border border-primary/50 bg-primary/[0.02] space-y-3">
+        <p className="font-medium text-sm text-primary">{label}</p>
+        {editContent}
+        <div className="flex gap-2">
+          <Button size="sm" onClick={onSave} disabled={isSaving || saveDisabled}>
+            {isSaving ? (
+              <><Loader2 className="mr-2 h-3 w-3 animate-spin" /> Saving...</>
+            ) : (
+              <><Check className="mr-2 h-3 w-3" /> Save & Restart</>
+            )}
+          </Button>
+          <Button variant="outline" size="sm" onClick={onCancel} disabled={isSaving}>
+            <X className="mr-2 h-3 w-3" /> Cancel
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="group p-4 rounded-lg border border-border/50 bg-muted/20">
+      <div className="flex items-start justify-between">
+        <div className="space-y-1">
+          <p className="font-medium text-sm">{label}</p>
+          {display}
+        </div>
+        <button
+          type="button"
+          onClick={onEdit}
+          disabled={disabled}
+          className={
+            disabled
+              ? 'p-1.5 rounded-md text-muted-foreground/50 opacity-40 cursor-not-allowed'
+              : 'p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors opacity-0 group-hover:opacity-100'
+          }
+          title={disabled ? 'Finish your current edit to change this' : `Edit ${label.toLowerCase()}`}
+        >
+          <Pencil className="h-3.5 w-3.5" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Pool selection option for inline editing.
+ */
+function PoolOption({
+  pool,
+  selected,
+  onSelect,
+}: {
+  pool: KnownPool;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={`w-full p-3 rounded-lg border transition-all text-left flex items-center gap-3 ${
+        selected
+          ? 'border-primary bg-primary/[0.04]'
+          : 'border-border bg-card hover:border-primary/45'
+      }`}
+    >
+      <PoolIcon logoUrl={pool.logoUrl} logoOnDark={pool.logoOnDark} name={pool.name} />
+      <div className="flex-1 min-w-0">
+        <div className={`font-medium text-sm ${selected ? 'text-primary' : ''}`}>{pool.name}</div>
+        <div className="text-xs text-muted-foreground font-mono">{pool.address}:{pool.port}</div>
+      </div>
+      {selected && (
+        <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
+          <Check className="w-3 h-3 text-background" />
+        </div>
+      )}
+    </button>
   );
 }
